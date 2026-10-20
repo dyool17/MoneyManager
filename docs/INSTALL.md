@@ -1,6 +1,6 @@
 # Instalación de Money Manager Desktop (beta)
 
-Versión actual: `0.1.0-beta.1`. Sólo lectura: la app no modifica datos del teléfono.
+Versión actual: `0.1.0-beta.2`. Sólo lectura: la app no modifica datos del teléfono.
 
 ## Linux (instalación por usuario, sin sudo)
 
@@ -33,7 +33,7 @@ Para reinstalar un AppImage ya compilado sin volver a compilar: `./scripts/insta
 
 ```bash
 cd app && pnpm tauri build --bundles deb
-sudo apt install "./src-tauri/target/release/bundle/deb/Money Manager_0.1.0-beta.1_amd64.deb"
+sudo apt install "./src-tauri/target/release/bundle/deb/Money Manager_0.1.0-beta.2_amd64.deb"
 ```
 
 ### Desinstalar
@@ -58,6 +58,8 @@ Pendiente (fase 4). Se generará un instalador `.msi` con `pnpm tauri build` en 
 4. Al conectar, la app guarda un backup automático. El resultado aparece en la misma pantalla.
 
 Sin teléfono, la app abre con datos demo.
+
+Para configurar qué cuentas suman al patrimonio y sus monedas, abre **Account metadata**. Puedes importar metadata de un respaldo nativo o guardar ajustes manuales; ninguna de esas acciones modifica el teléfono. Consulta [Totales con metadata de cuentas](ACCOUNT-METADATA.md).
 
 ## Problemas frecuentes
 

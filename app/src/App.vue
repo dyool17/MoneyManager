@@ -10,8 +10,9 @@ import NetWorthView from './components/NetWorthView.vue'
 import AccountsView from './components/AccountsView.vue'
 import CardsView from './components/CardsView.vue'
 import BudgetsView from './components/BudgetsView.vue'
+import AccountMetadataView from './components/AccountMetadataView.vue'
 
-type View = 'networth' | 'summary' | 'budgets' | 'movements' | 'accounts' | 'cards' | 'connection'
+type View = 'networth' | 'summary' | 'budgets' | 'movements' | 'accounts' | 'cards' | 'connection' | 'metadata'
 const session = useSession()
 const view = ref<View>('networth')
 
@@ -22,6 +23,7 @@ const NAV: { id: View; label: string }[] = [
   { id: 'movements', label: 'Transactions' },
   { id: 'accounts', label: 'Accounts' },
   { id: 'cards', label: 'Credit cards' },
+  { id: 'metadata', label: 'Account metadata' },
 ]
 const monthly = (v: View) => v === 'summary' || v === 'budgets' || v === 'movements' || v === 'accounts'
 
@@ -55,7 +57,7 @@ onMounted(() => session.connect('demo'))
       <p class="readonly">
         <span v-if="session.backupState === 'done' && session.backup?.sqlite.status === 'saved'" class="saved">Backup saved</span>
         <span v-else-if="session.source === 'phone' && session.backupState !== 'running'" class="unsaved">No full backup yet</span>
-        Read-only. Nothing on your phone is changed.
+        Changes are saved on your phone only after you confirm them.
       </p>
     </nav>
 
@@ -64,12 +66,13 @@ onMounted(() => session.connect('demo'))
       <ConnectionPanel v-if="view === 'connection'" @connected="view = 'networth'" />
       <template v-else-if="session.init">
         <PeriodHeader v-if="monthly(view)" />
-        <NetWorthView v-if="view === 'networth'" />
+        <NetWorthView v-if="view === 'networth'" @configure="view = 'metadata'" />
         <SummaryView v-else-if="view === 'summary'" />
         <BudgetsView v-else-if="view === 'budgets'" />
         <MovementsTable v-else-if="view === 'movements'" />
         <AccountsView v-else-if="view === 'accounts'" />
         <CardsView v-else-if="view === 'cards'" />
+        <AccountMetadataView v-else-if="view === 'metadata'" />
       </template>
     </main>
   </div>

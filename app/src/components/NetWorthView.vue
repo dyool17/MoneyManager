@@ -3,8 +3,12 @@ import { computed } from 'vue'
 import { useSession } from '../stores/session'
 import { formatMoney } from '../domain/format'
 import LineChart from './LineChart.vue'
+import { useAccountMetadata } from '../stores/metadata'
 
+defineEmits<{ configure: [] }>()
+const metadata = useAccountMetadata()
 const session = useSession()
+const current = computed(() => metadata.totals.netWorth !== null ? metadata.totals : session.source === 'demo' ? session.dashboard : null)
 const d = computed(() => session.dashboard)
 const history = computed(() => d.value?.history.map((p) => ({ label: p.month, value: p.total })) ?? [])
 
@@ -13,25 +17,38 @@ function stack(shares: { name: string; amount: number }[]) {
   const total = shares.reduce((sum, s) => sum + Math.abs(s.amount), 0) || 1
   return shares.map((s) => ({ ...s, pct: (Math.abs(s.amount) / total) * 100 }))
 }
-const assetStack = computed(() => stack(d.value?.assetShares ?? []))
-const debtStack = computed(() => stack(d.value?.debtShares ?? []))
+const assetStack = computed(() => stack(current.value?.assetShares ?? []))
+const debtStack = computed(() => stack(current.value?.debtShares ?? []))
 </script>
 
 <template>
   <section v-if="d">
-    <header class="hero" :title="`Source: ${d.source}`">
+    <p v-if="session.source === 'phone'">
+      Current totals use live balances and account metadata. Historical charts remain PC Manager data.
+      <button @click="$emit('configure')">Configure account metadata</button>
+    </p>
+    <p v-if="metadata.storageError" role="alert">{{ metadata.storageError }}</p>
+    <p v-if="metadata.changedAccounts.length" role="status">Accounts changed since import. Review metadata or import a fresh backup.</p>
+    <div v-if="!current" class="card">
+      <h2>Account metadata needed</h2>
+      <p>Configure {{ metadata.totals.missing.length }} account(s) or import a .mmbak backup before calculating corrected totals.</p>
+      <button @click="$emit('configure')">Configure accounts</button>
+      <p class="muted">Unverified PC Manager net worth: {{ formatMoney(d.netWorth) }}. It may differ from the mobile total.</p>
+    </div>
+    <header v-else class="hero" :title="metadata.totals.netWorth !== null ? 'Source: live account balances + metadata' : `Source: ${d.source}`">
       <div>
         <span class="muted">Net worth today</span>
-        <strong class="amount">{{ formatMoney(d.netWorth) }}</strong>
+        <strong class="amount">{{ formatMoney(current.netWorth!) }} <small>{{ metadata.state.baseCurrency }}</small></strong>
       </div>
       <dl>
-        <div><dt>Assets</dt><dd class="amount income">{{ formatMoney(d.assets) }}</dd></div>
-        <div><dt>Debts</dt><dd class="amount expense">{{ formatMoney(d.debts) }}</dd></div>
+        <div><dt>Assets</dt><dd class="amount income">{{ formatMoney(current.assets!) }}</dd></div>
+        <div><dt>Debts</dt><dd class="amount expense">{{ formatMoney(current.debts!) }}</dd></div>
       </dl>
     </header>
 
     <div class="card">
-      <h2>Net worth by month</h2>
+      <h2>Net worth by month — PC Manager history</h2>
+      <p v-if="session.source === 'phone'" class="muted">Historical figures are not recalculated using current account settings.</p>
       <LineChart v-if="history.length" :points="history" label="Net worth by month" />
       <p v-else class="muted">No history yet.</p>
     </div>
