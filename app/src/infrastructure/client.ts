@@ -118,3 +118,23 @@ export class PcManagerClient implements MoneyManagerClient {
     return mergeMovements(chunks)
   }
 }
+
+export type SqliteOutcome =
+  | { status: 'saved'; bytes: number }
+  | { status: 'empty' }
+  | { status: 'not-sqlite'; bytes: number }
+  | { status: 'failed'; reason: string }
+
+export interface BackupReport {
+  folder: string
+  createdAt: string
+  source: string
+  sqlite: SqliteOutcome
+  snapshot: { name: string; bytes: number }[]
+  snapshotErrors: string[]
+}
+
+/** Asks the desktop side to save a local backup. Never writes to the phone. */
+export function takeBackup(baseUrl: string, period: ReadParams): Promise<BackupReport> {
+  return invoke<BackupReport>('mm_backup', { baseUrl, period })
+}

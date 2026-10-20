@@ -25,6 +25,10 @@ pub enum Endpoint {
     Cards,
     #[serde(rename = "getEachAssetChartData")]
     AssetTrend,
+    /// Full app backup. Binary, so it is only reachable through the backup
+    /// command, never from `mm_read`.
+    #[serde(skip)]
+    SqliteBackup,
 }
 
 impl Endpoint {
@@ -37,6 +41,7 @@ impl Endpoint {
             Endpoint::Assets => "getAssetData",
             Endpoint::Cards => "getCardData",
             Endpoint::AssetTrend => "getEachAssetChartData",
+            Endpoint::SqliteBackup => "money.sqlite",
         }
     }
 }
@@ -135,8 +140,30 @@ impl PcManager {
     }
 
     pub async fn read(&self, base: &str, endpoint: Endpoint, params: &ReadParams) -> Result<String, String> {
+        let res = self.get(base, endpoint, params, None).await?;
+        res.text().await.map_err(|e| format!("Could not read response: {e}"))
+    }
+
+    /// Downloads a binary read endpoint. Larger timeout: backups can be big.
+    pub async fn read_bytes(&self, base: &str, endpoint: Endpoint) -> Result<Vec<u8>, String> {
+        let res = self.get(base, endpoint, &ReadParams::default(), Some(Duration::from_secs(180))).await?;
+        let bytes = res.bytes().await.map_err(|e| format!("Could not read response: {e}"))?;
+        Ok(bytes.to_vec())
+    }
+
+    async fn get(
+        &self,
+        base: &str,
+        endpoint: Endpoint,
+        params: &ReadParams,
+        timeout: Option<Duration>,
+    ) -> Result<reqwest::Response, String> {
         let url = build_url(base, endpoint, params)?;
-        let res = self.http.get(url).send().await.map_err(|e| {
+        let mut req = self.http.get(url);
+        if let Some(t) = timeout {
+            req = req.timeout(t);
+        }
+        let res = req.send().await.map_err(|e| {
             if e.is_timeout() {
                 "PC Manager did not answer in time".to_string()
             } else if e.is_connect() {
@@ -149,7 +176,7 @@ impl PcManager {
         if !status.is_success() {
             return Err(format!("PC Manager answered HTTP {}", status.as_u16()));
         }
-        res.text().await.map_err(|e| format!("Could not read response: {e}"))
+        Ok(res)
     }
 }
 
@@ -215,6 +242,8 @@ mod tests {
     fn rejects_unknown_endpoints_and_fields() {
         assert!(serde_json::from_str::<Endpoint>("\"create\"").is_err());
         assert!(serde_json::from_str::<Endpoint>("\"uploadSqlFile\"").is_err());
+        assert!(serde_json::from_str::<Endpoint>("\"money.sqlite\"").is_err());
+        assert!(serde_json::from_str::<Endpoint>("\"SqliteBackup\"").is_err());
         assert!(serde_json::from_str::<ReadParams>(r#"{"method":"POST"}"#).is_err());
     }
 

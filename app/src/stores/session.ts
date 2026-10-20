@@ -11,7 +11,13 @@ import type {
   Period,
   Summary,
 } from '../domain/types'
-import { FixtureTransport, PcManagerClient, TauriTransport } from '../infrastructure/client'
+import {
+  FixtureTransport,
+  PcManagerClient,
+  TauriTransport,
+  takeBackup,
+  type BackupReport,
+} from '../infrastructure/client'
 
 export type Status = 'idle' | 'loading' | 'ready' | 'offline' | 'invalid-response'
 export type Source = 'demo' | 'phone'
@@ -39,6 +45,9 @@ export const useSession = defineStore('session', () => {
   const dashboard = shallowRef<Dashboard | null>(null)
   const assets = shallowRef<AssetGroup[]>([])
   const cards = shallowRef<CardGroup[]>([])
+  const backup = shallowRef<BackupReport | null>(null)
+  const backupState = ref<'idle' | 'running' | 'done' | 'failed'>('idle')
+  const backupError = ref<string | null>(null)
   let client: MoneyManagerClient = new PcManagerClient(new FixtureTransport())
 
   let latest = 0
@@ -62,6 +71,20 @@ export const useSession = defineStore('session', () => {
       const isParse = e instanceof Error && e.name === 'InvalidResponseError'
       status.value = isParse ? 'invalid-response' : 'offline'
       error.value = e instanceof Error ? e.message : String(e)
+    }
+  }
+
+  /** Saves a local backup of the connected phone. Demo data is never backed up. */
+  async function backupNow() {
+    if (source.value !== 'phone' || !init.value || backupState.value === 'running') return
+    backupState.value = 'running'
+    backupError.value = null
+    try {
+      backup.value = await takeBackup(address.value, { ...period.value, mbid: init.value.currentBook.id })
+      backupState.value = 'done'
+    } catch (e) {
+      backupError.value = e instanceof Error ? e.message : String(e)
+      backupState.value = 'failed'
     }
   }
 
@@ -95,6 +118,7 @@ export const useSession = defineStore('session', () => {
         }
       }
     })
+    if (next === 'phone' && status.value === 'ready' && source.value === 'phone') await backupNow()
   }
 
   async function readOverview(from: MoneyManagerClient) {
@@ -151,5 +175,9 @@ export const useSession = defineStore('session', () => {
     setPeriod,
     refresh,
     getAssetTrend,
+    backup,
+    backupState,
+    backupError,
+    backupNow,
   }
 })

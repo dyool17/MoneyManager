@@ -39,7 +39,11 @@ onMounted(() => session.connect('demo'))
         {{ item.label }}
       </button>
       <button class="connect" :aria-current="view === 'connection'" @click="view = 'connection'">Connect phone</button>
-      <p class="readonly">Read-only. Nothing on your phone is changed.</p>
+      <p class="readonly">
+        <span v-if="session.backupState === 'done' && session.backup?.sqlite.status === 'saved'" class="saved">Backup saved</span>
+        <span v-else-if="session.source === 'phone' && session.backupState !== 'running'" class="unsaved">No full backup yet</span>
+        Read-only. Nothing on your phone is changed.
+      </p>
     </nav>
 
     <main>
@@ -90,6 +94,9 @@ onMounted(() => session.connect('demo'))
   font-weight: 600;
 }
 .rail .connect { margin-top: 0.75rem; }
+.saved, .unsaved { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+.saved { color: var(--income); }
+.unsaved { color: var(--warn-ink); }
 .readonly {
   margin-top: auto;
   padding: 0 0.5rem;

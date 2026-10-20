@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useSession } from '../stores/session'
+import BackupPanel from './BackupPanel.vue'
 
 const emit = defineEmits<{ connected: [] }>()
 const session = useSession()
@@ -8,7 +9,8 @@ const address = ref(session.address || 'http://192.168.1.')
 
 async function connect(source: 'demo' | 'phone') {
   await session.connect(source, address.value)
-  if (session.status === 'ready') emit('connected')
+  // Stay here after a phone connection so the backup result is visible.
+  if (session.status === 'ready' && source === 'demo') emit('connected')
 }
 </script>
 
@@ -32,6 +34,7 @@ async function connect(source: 'demo' | 'phone') {
       No phone nearby?
       <button type="button" @click="connect('demo')">Use demo data</button>
     </p>
+    <BackupPanel />
   </section>
 </template>
 
