@@ -28,7 +28,7 @@ Delivery: ask-on-risk. Runners: `pnpm test` (app/), `cargo test` (app/src-tauri)
 - [x] T8 (S9,S10) read-only native SQLite metadata import — inline + independent verifier (focused 3/3 + own probes, baseline comparison, typecheck PASS); bundled-path regression and browser CSP smoke added after verifier report; commits 724831d; Risk: item 5 (SQLite WASM dependency) mitigated: local bundled WASM, 64 MiB cap, query-only, CSP `wasm-unsafe-eval` only
 - [x] T9 (S7-S10) metadata persistence and account configuration UI, current net-worth integration and docs — inline; RED missing store module, GREEN 4 focused store tests; browser smoke under production build + Tauri CSP reproduced import→override preserved→reset→44513.75; docs/ACCOUNT-METADATA.md + INSTALL entry; commits 724831d + a10a70c
 - [x] T5 (S5) writes — inline + independent verifier (PASS on contracts, validation, no-retry, backup gate, log shape, dialog confirmation); verifier advisories fixed (real calendar dates, unstructured response = unconfirmed instead of applied); committed e5670bf (Rust, high-risk item 1, own commit) + da10260 (UI/store/docs); rust 30/30, frontend 45/45, typecheck PASS; live phone test PASSED with user consent (backup, create {success:true}, read back, delete {success:true}, confirmed absent) — c97cf35
-- [ ] T10 (S10) outbox for phone writes — in progress; inline test-first; branch feat/outbox; commit pending
+- [x] T10 (S10) outbox for phone writes — inline test-first on branch feat/outbox; merged into main (bf19b17); rust 31/31, frontend 55/55, typecheck PASS, browser smoke of the full path; beta rebuilt and installed
 - [ ] T6 (S6) restore — dropped; user decided on 2026-10-20 to leave it pending
 
 ## Log
