@@ -138,3 +138,8 @@ export interface BackupReport {
 export function takeBackup(baseUrl: string, period: ReadParams): Promise<BackupReport> {
   return invoke<BackupReport>('mm_backup', { baseUrl, period })
 }
+
+/** Saves a CSV in the Downloads folder (desktop only) and returns the file path. */
+export function exportCsv(period: Period, content: string): Promise<string> {
+  return invoke<string>('mm_export_csv', { startDate: period.startDate, endDate: period.endDate, content })
+}

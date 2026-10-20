@@ -16,9 +16,9 @@ Delivery: ask-on-risk. Runners: `pnpm test` (app/), `cargo test` (app/src-tauri)
 ## Tasks
 
 - [x] T1 (S1) install script + docs + installed AppImage — inline
-- [ ] T2 (S2) budgets view — inline
-- [ ] T3 (S3) book selector — inline
-- [ ] T4 (S4) local export — inline
+- [x] T2 (S2) budgets view — inline
+- [x] T3 (S3) book selector — inline
+- [x] T4 (S4) local export (CSV with BOM, formula-safe, saved to Downloads) — inline
 - [ ] T5 (S5) writes — inline, high risk (item 1) → independent verifier
 - [ ] T6 (S6) restore — pending decision
 
@@ -26,3 +26,4 @@ Delivery: ask-on-risk. Runners: `pnpm test` (app/), `cargo test` (app/src-tauri)
 
 - L1 (2026-10-20): "listo, quiero que avancemos a resolver lo que no hace aun, punto a punto. y dejes instrucciones para instalacion y  dejes instalada la version beta."
 - L2: Beta 0.1.0-beta.1 built (AppImage 83 MiB, deb 3.4 MiB) and installed to ~/.local/opt/money-manager; smoke launch stayed up 15 s.
+- L3: T2 budgets (pace marker, over/ahead states), T3 book selector (period queries only; dashboard/assets/cards are not per book on the server), T4 CSV export. pnpm test 26/26, cargo test 10/10.

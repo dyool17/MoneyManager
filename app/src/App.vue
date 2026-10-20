@@ -9,19 +9,21 @@ import StatusBanner from './components/StatusBanner.vue'
 import NetWorthView from './components/NetWorthView.vue'
 import AccountsView from './components/AccountsView.vue'
 import CardsView from './components/CardsView.vue'
+import BudgetsView from './components/BudgetsView.vue'
 
-type View = 'networth' | 'summary' | 'movements' | 'accounts' | 'cards' | 'connection'
+type View = 'networth' | 'summary' | 'budgets' | 'movements' | 'accounts' | 'cards' | 'connection'
 const session = useSession()
 const view = ref<View>('networth')
 
 const NAV: { id: View; label: string }[] = [
   { id: 'networth', label: 'Net worth' },
   { id: 'summary', label: 'Monthly summary' },
+  { id: 'budgets', label: 'Budgets' },
   { id: 'movements', label: 'Transactions' },
   { id: 'accounts', label: 'Accounts' },
   { id: 'cards', label: 'Credit cards' },
 ]
-const monthly = (v: View) => v === 'summary' || v === 'movements' || v === 'accounts'
+const monthly = (v: View) => v === 'summary' || v === 'budgets' || v === 'movements' || v === 'accounts'
 
 onMounted(() => session.connect('demo'))
 </script>
@@ -30,7 +32,18 @@ onMounted(() => session.connect('demo'))
   <div class="shell">
     <nav class="rail" aria-label="Main">
       <div class="book">
-        <strong>{{ session.init?.currentBook.name ?? 'Money Manager' }}</strong>
+        <select
+          v-if="(session.init?.books.length ?? 0) > 1"
+          id="book"
+          class="book-select"
+          aria-label="Book"
+          :value="session.bookId"
+          :disabled="session.status === 'loading'"
+          @change="session.setBook(($event.target as HTMLSelectElement).value)"
+        >
+          <option v-for="b in session.init?.books" :key="b.id" :value="b.id">{{ b.name }}</option>
+        </select>
+        <strong v-else>{{ session.init?.currentBook.name ?? 'Money Manager' }}</strong>
         <span :class="['source', session.source]">
           {{ session.source === 'demo' ? 'Demo data' : session.address }}
         </span>
@@ -53,6 +66,7 @@ onMounted(() => session.connect('demo'))
         <PeriodHeader v-if="monthly(view)" />
         <NetWorthView v-if="view === 'networth'" />
         <SummaryView v-else-if="view === 'summary'" />
+        <BudgetsView v-else-if="view === 'budgets'" />
         <MovementsTable v-else-if="view === 'movements'" />
         <AccountsView v-else-if="view === 'accounts'" />
         <CardsView v-else-if="view === 'cards'" />
@@ -81,6 +95,7 @@ onMounted(() => session.connect('demo'))
   padding: 0 0.5rem 1.25rem;
 }
 .book strong { font-size: 1.05rem; }
+.book-select { font-weight: 600; margin-bottom: 0.2rem; }
 .source { font-size: 0.8rem; color: var(--ink-soft); }
 .source.phone { color: var(--income); }
 .rail button {

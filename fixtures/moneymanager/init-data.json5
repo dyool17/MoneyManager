@@ -6,7 +6,8 @@
     mbName: 'Demo Book'
   },
   multiBooks: [
-    { mbid: '1', mbname: 'Demo Book', baseDate: '1' }
+    { mbid: '1', mbname: 'Demo Book', baseDate: '1' },
+    { mbid: '2', mbname: 'Travel', baseDate: '1' }
   ],
   category_0: [
     { mcid: 'income-salary', mcname: 'Salary', mcsc: [] },

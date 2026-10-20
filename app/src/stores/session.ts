@@ -45,6 +45,8 @@ export const useSession = defineStore('session', () => {
   const dashboard = shallowRef<Dashboard | null>(null)
   const assets = shallowRef<AssetGroup[]>([])
   const cards = shallowRef<CardGroup[]>([])
+  /** Book used for period queries. Net worth, accounts and cards are not per book on the server. */
+  const bookId = ref('')
   const backup = shallowRef<BackupReport | null>(null)
   const backupState = ref<'idle' | 'running' | 'done' | 'failed'>('idle')
   const backupError = ref<string | null>(null)
@@ -80,7 +82,7 @@ export const useSession = defineStore('session', () => {
     backupState.value = 'running'
     backupError.value = null
     try {
-      backup.value = await takeBackup(address.value, { ...period.value, mbid: init.value.currentBook.id })
+      backup.value = await takeBackup(address.value, { ...period.value, mbid: bookId.value })
       backupState.value = 'done'
     } catch (e) {
       backupError.value = e instanceof Error ? e.message : String(e)
@@ -104,6 +106,7 @@ export const useSession = defineStore('session', () => {
         client = candidate
         source.value = next
         init.value = data
+        bookId.value = data.currentBook.id
         period.value = { ...data.defaultPeriod }
         summary.value = s
         movements.value = m
@@ -132,12 +135,12 @@ export const useSession = defineStore('session', () => {
     }
   }
 
-  async function loadPeriod(target: Period) {
-    const mbid = init.value?.currentBook.id ?? ''
+  async function loadPeriod(target: Period, mbid = bookId.value) {
     const query = { ...target, mbid }
     const s = await client.getSummary(query)
     const m = await client.getMovements(query)
     return () => {
+      bookId.value = mbid
       period.value = { ...target }
       summary.value = s
       movements.value = m
@@ -145,6 +148,7 @@ export const useSession = defineStore('session', () => {
   }
 
   const setPeriod = (next: Period) => run(() => loadPeriod(next))
+  const setBook = (id: string) => run(() => loadPeriod(period.value, id))
   const refresh = () =>
     run(async () => {
       const p = await loadPeriod(period.value)
@@ -172,7 +176,9 @@ export const useSession = defineStore('session', () => {
     assets,
     cards,
     connect,
+    bookId,
     setPeriod,
+    setBook,
     refresh,
     getAssetTrend,
     backup,
