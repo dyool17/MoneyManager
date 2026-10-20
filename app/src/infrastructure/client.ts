@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import { mergeMovements, splitByMonth, todayIso } from '../domain/period'
+import { mergeMovements, safeQueryStart, splitByMonth, todayIso } from '../domain/period'
 import type { MoneyManagerClient, MovementQuery, Period } from '../domain/types'
 import {
   parseAssets,
@@ -104,8 +104,11 @@ export class PcManagerClient implements MoneyManagerClient {
     const chunks = []
     // Sequential on purpose: the phone server is single-threaded and slow.
     for (const month of splitByMonth(query)) {
+      // The phone hangs for periods starting within two days of today, so the
+      // request is widened and the extra days are filtered out below.
       const text = await this.transport.get('getDataByPeriod', {
         ...month,
+        startDate: safeQueryStart(month.startDate, today),
         mbid: query.mbid,
         assetId: query.assetId ?? '',
       })

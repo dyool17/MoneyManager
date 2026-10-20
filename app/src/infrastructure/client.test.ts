@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mergeMovements, splitByMonth } from '../domain/period'
+import { mergeMovements, safeQueryStart, splitByMonth } from '../domain/period'
 import { InvalidResponseError } from '../domain/types'
 import { PcManagerClient, type Endpoint, type ReadParams, type Transport } from './client'
 import { parseInitData, parseMovements, parseSummary } from './parse'
@@ -122,5 +122,49 @@ describe('PcManagerClient.getMovements', () => {
   it('dedupes ids repeated across chunks', () => {
     const [m] = parseMovements(fixture('movements.xml'), '2026-01-01')
     expect(mergeMovements([[m], [m]])).toHaveLength(1)
+  })
+
+  it('widens a query that starts within two days of today, because the phone hangs on it', async () => {
+    const calls: ReadParams[] = []
+    const transport: Transport = {
+      async get(endpoint: Endpoint, params: ReadParams = {}) {
+        expect(endpoint).toBe('getDataByPeriod')
+        calls.push(params)
+        return fixture('movements.xml')
+      },
+    }
+    const client = new PcManagerClient(transport, () => '2026-08-03')
+    const rows = await client.getMovements({ startDate: '2026-08-03', endDate: '2026-08-31', mbid: '1' })
+    expect(calls[0]?.startDate).toBe('2026-07-31')
+    // The extra days are filtered out, so the rows are exactly the period's.
+    expect(rows.every((r) => r.date >= '2026-08-03')).toBe(true)
+  })
+
+  it('leaves a query that starts earlier than today untouched', async () => {
+    const calls: ReadParams[] = []
+    const transport: Transport = {
+      async get(_endpoint: Endpoint, params: ReadParams = {}) {
+        calls.push(params)
+        return fixture('movements.xml')
+      },
+    }
+    const client = new PcManagerClient(transport, () => '2026-08-15')
+    await client.getMovements({ startDate: '2026-08-01', endDate: '2026-08-31', mbid: '1' })
+    expect(calls[0]?.startDate).toBe('2026-08-01')
+  })
+})
+
+describe('safeQueryStart', () => {
+  it('moves a start within two days of today three days back', () => {
+    expect(safeQueryStart('2026-10-20', '2026-10-20')).toBe('2026-10-17')
+    expect(safeQueryStart('2026-10-19', '2026-10-20')).toBe('2026-10-17')
+    expect(safeQueryStart('2026-10-18', '2026-10-20')).toBe('2026-10-17')
+  })
+
+  it('keeps starts outside that window', () => {
+    expect(safeQueryStart('2026-10-17', '2026-10-20')).toBe('2026-10-17')
+    expect(safeQueryStart('2026-10-01', '2026-10-20')).toBe('2026-10-01')
+    expect(safeQueryStart('2026-11-01', '2026-10-20')).toBe('2026-11-01')
+    expect(safeQueryStart('not-a-date', '2026-10-20')).toBe('not-a-date')
   })
 })

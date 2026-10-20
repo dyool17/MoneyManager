@@ -87,3 +87,4 @@ Ejemplos de cambios que la app todavía no cubre: restaurar un respaldo sobre el
 | "The phone did not confirm the change" | El teléfono respondió algo que la app no reconoce. Revisa el teléfono antes de reintentar: el cambio pudo aplicarse. |
 | "The phone rejected the change" | El teléfono rechazó la operación. El motivo aparece en el mensaje. |
 | "This backup does not match any loaded accounts" | El respaldo es de otro teléfono o de otro libro. Exporta uno nuevo desde el móvil. |
+| "PC Manager did not answer in time" | El servidor del móvil se cuelga con algunos periodos de fechas. La app ensancha la consulta y filtra el resultado; si persiste, reinicia PC Manager en el teléfono. |
