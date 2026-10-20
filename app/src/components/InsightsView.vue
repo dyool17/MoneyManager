@@ -5,6 +5,7 @@ import { useSession } from '../stores/session'
 import { analyze, categoryShares } from '../domain/insights'
 import { formatDate, formatMoney, monthLabel } from '../domain/format'
 import BarChart from './BarChart.vue'
+import { useCountUp } from '../composables/countUp'
 import SpendingCalendar from './SpendingCalendar.vue'
 
 const history = useHistory()
@@ -26,6 +27,7 @@ const first = computed(() => {
 })
 const r = computed(() => (first.value ? analyze(history.movements, first.value, history.span.last) : null))
 
+const averageShown = useCountUp(computed(() => r.value?.averageExpense))
 const shortMonth = (k: string) => new Date(Number(k.slice(0, 4)), Number(k.slice(5)) - 1, 1).toLocaleDateString(undefined, { month: 'short' })
 const monthRows = computed(() => r.value?.months.map((m) => ({ label: shortMonth(m.month), values: { income: m.income, expense: m.expense } })) ?? [])
 const SERIES = [
@@ -100,7 +102,7 @@ onMounted(() => { if (history.state === 'idle') loadFromSession() })
       <div class="tiles">
         <div class="tile">
           <span>Average spent per month</span>
-          <strong class="amount">{{ formatMoney(r.averageExpense) }}</strong>
+          <strong class="amount">{{ formatMoney(averageShown) }}</strong>
         </div>
         <div class="tile">
           <span>Saved of what came in</span>

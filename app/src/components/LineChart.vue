@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { formatMoney } from '../domain/format'
 
 const props = defineProps<{
@@ -12,6 +12,8 @@ const props = defineProps<{
 const W = 600
 const H = 180
 const PAD = { top: 16, right: 16, bottom: 28, left: 16 }
+
+const hover = ref<number | null>(null)
 
 const geometry = computed(() => {
   const values = props.points.map((p) => p.value)
@@ -44,12 +46,15 @@ const geometry = computed(() => {
       <line v-if="geometry.zeroY !== null" :x1="PAD.left" :x2="W - PAD.right" :y1="geometry.zeroY" :y2="geometry.zeroY" class="zero" />
       <path :d="geometry.area" class="area" :style="{ fill: color ?? 'var(--accent)' }" />
       <path :d="geometry.line" class="line" :style="{ stroke: color ?? 'var(--accent)' }" />
-      <g v-for="p in geometry.xy" :key="p.label">
-        <circle :cx="p.x" :cy="p.y" r="4" :style="{ fill: color ?? 'var(--accent)' }">
-          <title>{{ p.label }}: {{ formatMoney(p.value) }}</title>
-        </circle>
+      <line v-if="hover !== null" class="cross" :x1="geometry.xy[hover]!.x" :x2="geometry.xy[hover]!.x" :y1="PAD.top" :y2="H - PAD.bottom" />
+      <g v-for="(p, i) in geometry.xy" :key="p.label">
+        <circle :cx="p.x" :cy="p.y" :r="hover === i ? 6 : 4" class="dot" :style="{ fill: color ?? 'var(--accent)' }" />
+        <rect class="hit" :x="p.x - 30" :y="0" width="60" :height="H" @mouseenter="hover = i" @mouseleave="hover = null" />
       </g>
     </svg>
+    <div v-if="hover !== null" class="tooltip" :style="{ left: `${(geometry.xy[hover]!.x / W) * 100}%` }">
+      <strong>{{ geometry.xy[hover]!.label }}</strong> {{ formatMoney(geometry.xy[hover]!.value) }}
+    </div>
     <figcaption>
       <span v-for="p in points" :key="p.label">{{ p.label }}</span>
     </figcaption>
@@ -57,7 +62,12 @@ const geometry = computed(() => {
 </template>
 
 <style scoped>
-figure { margin: 0; }
+figure { margin: 0; position: relative; }
+.cross { stroke: var(--ink-soft); stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
+.dot { stroke: var(--paper); stroke-width: 2; vector-effect: non-scaling-stroke; transition: r 0.15s; }
+.hit { fill: transparent; }
+.tooltip { position: absolute; top: -0.5rem; transform: translate(-50%, -100%); pointer-events: none; background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: 0.35rem 0.6rem; font-size: 0.82rem; white-space: nowrap; box-shadow: 0 4px 16px rgb(0 0 0 / 0.12); }
+.tooltip strong { margin-right: 0.4rem; }
 svg { width: 100%; height: 180px; display: block; overflow: visible; }
 .zero { stroke: var(--rule); stroke-dasharray: 3 4; }
 .area { opacity: 0.12; }
