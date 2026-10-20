@@ -162,28 +162,40 @@ impl PcManager {
     }
 
     /// Sends one write. Never retried: a timed-out write may already be applied.
-    pub async fn write(&self, base: &str, req: &crate::writes::Request) -> Result<String, String> {
-        let mut url = validate_base_url(base)?;
+    pub async fn write(&self, base: &str, req: &crate::writes::Request) -> Result<String, crate::WriteError> {
+        use crate::{WriteError, WriteErrorKind};
+        let mut url = validate_base_url(base)
+            .map_err(|e| WriteError::new(WriteErrorKind::Invalid, e))?;
         url.set_path(&format!("/moneyBook/{}", req.path));
         let res = self.http.post(url).form(&req.form).send().await.map_err(|e| {
             if e.is_timeout() {
-                "The phone did not confirm the change in time. Refresh to check whether it was saved before trying again.".to_string()
+                WriteError::new(
+                    WriteErrorKind::Timeout,
+                    "The phone did not confirm the change in time. Refresh to check whether it was saved before trying again.",
+                )
             } else if e.is_connect() {
-                "Cannot reach PC Manager. Nothing was changed.".to_string()
+                // The request never left this computer, so it can be sent later.
+                WriteError::new(
+                    WriteErrorKind::Offline,
+                    "PC Manager is not reachable. It stops when the phone is locked or you switch apps; open Money Manager again and keep it on screen.",
+                )
             } else {
-                format!("Network error: {e}")
+                WriteError::new(WriteErrorKind::Http, format!("Network error: {e}"))
             }
         })?;
         let status = res.status();
         let body = res.text().await.unwrap_or_default();
         if !status.is_success() {
-            return Err(format!("PC Manager answered HTTP {}", status.as_u16()));
+            return Err(WriteError::new(
+                WriteErrorKind::Http,
+                format!("PC Manager answered HTTP {}", status.as_u16()),
+            ));
         }
         if let Some(reason) = crate::writes::is_failure(&body) {
-            return Err(reason);
+            return Err(WriteError::new(WriteErrorKind::Rejected, reason));
         }
         if let Some(reason) = crate::writes::is_unconfirmed(&body) {
-            return Err(reason);
+            return Err(WriteError::new(WriteErrorKind::Unconfirmed, reason));
         }
         Ok(body)
     }
