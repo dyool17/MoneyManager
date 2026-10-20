@@ -1,6 +1,7 @@
 const money = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-export const formatMoney = (n: number) => money.format(n)
+// `+ 0` turns -0 into 0 so zero balances never show as "-0.00".
+export const formatMoney = (n: number) => money.format(n + 0)
 
 export function formatDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number)

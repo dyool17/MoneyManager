@@ -6,10 +6,22 @@ import PeriodHeader from './components/PeriodHeader.vue'
 import SummaryView from './components/SummaryView.vue'
 import MovementsTable from './components/MovementsTable.vue'
 import StatusBanner from './components/StatusBanner.vue'
+import NetWorthView from './components/NetWorthView.vue'
+import AccountsView from './components/AccountsView.vue'
+import CardsView from './components/CardsView.vue'
 
-type View = 'summary' | 'movements' | 'connection'
+type View = 'networth' | 'summary' | 'movements' | 'accounts' | 'cards' | 'connection'
 const session = useSession()
-const view = ref<View>('summary')
+const view = ref<View>('networth')
+
+const NAV: { id: View; label: string }[] = [
+  { id: 'networth', label: 'Net worth' },
+  { id: 'summary', label: 'Monthly summary' },
+  { id: 'movements', label: 'Transactions' },
+  { id: 'accounts', label: 'Accounts' },
+  { id: 'cards', label: 'Credit cards' },
+]
+const monthly = (v: View) => v === 'summary' || v === 'movements' || v === 'accounts'
 
 onMounted(() => session.connect('demo'))
 </script>
@@ -23,19 +35,23 @@ onMounted(() => session.connect('demo'))
           {{ session.source === 'demo' ? 'Demo data' : session.address }}
         </span>
       </div>
-      <button :aria-current="view === 'summary'" @click="view = 'summary'">Summary</button>
-      <button :aria-current="view === 'movements'" @click="view = 'movements'">Transactions</button>
-      <button :aria-current="view === 'connection'" @click="view = 'connection'">Connect phone</button>
+      <button v-for="item in NAV" :key="item.id" :aria-current="view === item.id" @click="view = item.id">
+        {{ item.label }}
+      </button>
+      <button class="connect" :aria-current="view === 'connection'" @click="view = 'connection'">Connect phone</button>
       <p class="readonly">Read-only. Nothing on your phone is changed.</p>
     </nav>
 
     <main>
       <StatusBanner />
-      <ConnectionPanel v-if="view === 'connection'" @connected="view = 'summary'" />
+      <ConnectionPanel v-if="view === 'connection'" @connected="view = 'networth'" />
       <template v-else-if="session.init">
-        <PeriodHeader />
-        <SummaryView v-if="view === 'summary'" />
-        <MovementsTable v-else />
+        <PeriodHeader v-if="monthly(view)" />
+        <NetWorthView v-if="view === 'networth'" />
+        <SummaryView v-else-if="view === 'summary'" />
+        <MovementsTable v-else-if="view === 'movements'" />
+        <AccountsView v-else-if="view === 'accounts'" />
+        <CardsView v-else-if="view === 'cards'" />
       </template>
     </main>
   </div>
@@ -73,6 +89,7 @@ onMounted(() => session.connect('demo'))
   background: var(--mist);
   font-weight: 600;
 }
+.rail .connect { margin-top: 0.75rem; }
 .readonly {
   margin-top: auto;
   padding: 0 0.5rem;

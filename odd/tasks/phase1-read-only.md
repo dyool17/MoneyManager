@@ -27,3 +27,4 @@ Delivery: ask-on-risk. Test runner: `pnpm vitest run` (app/), `cargo test` (app/
 - L4: T1+T3 done. `pnpm test` 12/12, `pnpm build` OK, UI checked in browser with demo data. RED not observed separately (tests written alongside code).
 - L5: Demo mode ignores month changes for the summary (single fixture); expected.
 - L6: libs installed by user; `cargo test` 4/4. Independent verifier: S3/S4/S7 PASS, no blockers. Advisories: overlapping loadPeriod race, port 80 rejected.
+- L7 (2026-10-20): "to nice, sigamos con lo siguiente" → Fase 2 on branch `feat/phase2-dashboard`: Rust allowlist +4 read endpoints (dashboard, assets, cards, asset trend; `cargo test` 5/5), parsers + client methods (`pnpm test` 19/19), views Net worth, Accounts (tree + monthly trend + month transactions), Credit cards. Store now ignores stale overlapping loads (fixes L6 advisory). Checked in browser with demo data.

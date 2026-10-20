@@ -1,13 +1,32 @@
 import { invoke } from '@tauri-apps/api/core'
 import { mergeMovements, splitByMonth, todayIso } from '../domain/period'
 import type { MoneyManagerClient, MovementQuery, Period } from '../domain/types'
-import { parseInitData, parseMovements, parseSummary } from './parse'
+import {
+  parseAssets,
+  parseAssetTrend,
+  parseCards,
+  parseDashboard,
+  parseInitData,
+  parseMovements,
+  parseSummary,
+} from './parse'
 import initFixture from '../../../fixtures/moneymanager/init-data.json5?raw'
 import summaryFixture from '../../../fixtures/moneymanager/summary.json5?raw'
 import movementsFixture from '../../../fixtures/moneymanager/movements.xml?raw'
+import dashboardFixture from '../../../fixtures/moneymanager/dashboard.json5?raw'
+import assetsFixture from '../../../fixtures/moneymanager/assets.json5?raw'
+import cardsFixture from '../../../fixtures/moneymanager/cards.json5?raw'
+import trendFixture from '../../../fixtures/moneymanager/asset-trend.json5?raw'
 
-/** Read endpoints allowed in phase 1. Mirrors the Rust `Endpoint` enum. */
-export type Endpoint = 'getInitData' | 'getSummaryDataByPeriod' | 'getDataByPeriod'
+/** Allowed read endpoints. Mirrors the Rust `Endpoint` enum. */
+export type Endpoint =
+  | 'getInitData'
+  | 'getSummaryDataByPeriod'
+  | 'getDataByPeriod'
+  | 'getDashBoardData'
+  | 'getAssetData'
+  | 'getCardData'
+  | 'getEachAssetChartData'
 
 export interface ReadParams {
   startDate?: string
@@ -38,6 +57,14 @@ export class FixtureTransport implements Transport {
         return summaryFixture
       case 'getDataByPeriod':
         return movementsFixture
+      case 'getDashBoardData':
+        return dashboardFixture
+      case 'getAssetData':
+        return assetsFixture
+      case 'getCardData':
+        return cardsFixture
+      case 'getEachAssetChartData':
+        return trendFixture
     }
   }
 }
@@ -54,6 +81,22 @@ export class PcManagerClient implements MoneyManagerClient {
 
   async getSummary(query: Period & { mbid: string }) {
     return parseSummary(await this.transport.get('getSummaryDataByPeriod', query))
+  }
+
+  async getDashboard() {
+    return parseDashboard(await this.transport.get('getDashBoardData'))
+  }
+
+  async getAssets() {
+    return parseAssets(await this.transport.get('getAssetData'))
+  }
+
+  async getCards() {
+    return parseCards(await this.transport.get('getCardData'))
+  }
+
+  async getAssetTrend(assetId: string) {
+    return parseAssetTrend(await this.transport.get('getEachAssetChartData', { assetId }))
   }
 
   async getMovements(query: MovementQuery) {

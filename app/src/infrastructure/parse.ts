@@ -2,8 +2,12 @@ import JSON5 from 'json5'
 import { XMLParser } from 'fast-xml-parser'
 import {
   InvalidResponseError,
+  type AssetGroup,
+  type CardGroup,
   type Category,
+  type Dashboard,
   type InitData,
+  type MonthPoint,
   type Movement,
   type MovementType,
   type Summary,
@@ -156,4 +160,76 @@ export function parseMovements(text: string, today: string): Movement[] {
       isFuture: date > today,
     }
   })
+}
+
+export function parseDashboard(text: string): Dashboard {
+  const source = 'getDashBoardData'
+  const root = asObject(parseLooseObject(text, source), source, 'root')
+  const sum = asObject(root.assetSummary, source, 'assetSummary')
+  const shares = (field: string) =>
+    asArray(root[field] ?? [], source, field).map((r) => ({
+      name: String(r.assetName),
+      amount: num(r.assetMoney, source, `${field}.assetMoney`),
+    }))
+  return {
+    netWorth: num(sum.totalAsset, source, 'assetSummary.totalAsset'),
+    assets: num(sum.asset, source, 'assetSummary.asset'),
+    debts: num(sum.debt, source, 'assetSummary.debt'),
+    history: asArray(root.assetLine ?? [], source, 'assetLine').map((r) => ({
+      month: String(r.month),
+      total: num(r.total, source, 'assetLine.total'),
+      assets: num(r.asset, source, 'assetLine.asset'),
+      debts: num(r.debt, source, 'assetLine.debt'),
+    })),
+    assetShares: shares('assetRatio'),
+    debtShares: shares('debtRatio'),
+    source,
+  }
+}
+
+function item(r: Raw, source: string) {
+  const id = str(r.assetId)
+  if (!id) throw new InvalidResponseError(source, 'item missing assetId')
+  return {
+    id,
+    name: String(r.assetName),
+    balance: num(r.assetMoney, source, 'assetMoney'),
+    color: str(r.color),
+  }
+}
+
+export function parseAssets(text: string): AssetGroup[] {
+  const source = 'getAssetData'
+  return asArray(parseLooseObject(text, source), source, 'root').map((g) => ({
+    id: String(g.assetGroupId),
+    name: String(g.assetName),
+    balance: num(g.assetMoney, source, 'assetMoney'),
+    items: asArray(g.children ?? [], source, 'children').map((c) => item(c, source)),
+  }))
+}
+
+export function parseCards(text: string): CardGroup[] {
+  const source = 'getCardData'
+  return asArray(parseLooseObject(text, source), source, 'root').map((g) => ({
+    id: String(g.assetGroupId),
+    name: String(g.assetName),
+    balance: num(g.assetMoney, source, 'assetMoney'),
+    outstanding: num(g.notPayMoney ?? 0, source, 'notPayMoney'),
+    items: asArray(g.children ?? [], source, 'children').map((c) => ({
+      ...item(c, source),
+      outstanding: num(c.notPayMoney ?? 0, source, 'notPayMoney'),
+      linkedAssetId: str(c.linkAssetId),
+      closingDay: str(c.jungsanDay),
+      paymentDay: str(c.paymentDay),
+    })),
+  }))
+}
+
+export function parseAssetTrend(text: string): MonthPoint[] {
+  const source = 'getEachAssetChartData'
+  const root = asObject(parseLooseObject(text, source), source, 'root')
+  return asArray(root.assetChartData ?? [], source, 'assetChartData').map((r) => ({
+    month: String(r.month),
+    value: num(r.assetMoney, source, 'assetChartData.assetMoney'),
+  }))
 }

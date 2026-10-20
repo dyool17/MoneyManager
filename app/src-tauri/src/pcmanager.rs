@@ -17,6 +17,14 @@ pub enum Endpoint {
     SummaryByPeriod,
     #[serde(rename = "getDataByPeriod")]
     MovementsByPeriod,
+    #[serde(rename = "getDashBoardData")]
+    Dashboard,
+    #[serde(rename = "getAssetData")]
+    Assets,
+    #[serde(rename = "getCardData")]
+    Cards,
+    #[serde(rename = "getEachAssetChartData")]
+    AssetTrend,
 }
 
 impl Endpoint {
@@ -25,6 +33,10 @@ impl Endpoint {
             Endpoint::InitData => "getInitData",
             Endpoint::SummaryByPeriod => "getSummaryDataByPeriod",
             Endpoint::MovementsByPeriod => "getDataByPeriod",
+            Endpoint::Dashboard => "getDashBoardData",
+            Endpoint::Assets => "getAssetData",
+            Endpoint::Cards => "getCardData",
+            Endpoint::AssetTrend => "getEachAssetChartData",
         }
     }
 }
@@ -80,7 +92,7 @@ pub fn build_url(base: &str, endpoint: Endpoint, params: &ReadParams) -> Result<
     let mut url = validate_base_url(base)?;
     url.set_path(&format!("/moneyBook/{}", endpoint.path()));
 
-    let needs_period = endpoint != Endpoint::InitData;
+    let needs_period = matches!(endpoint, Endpoint::SummaryByPeriod | Endpoint::MovementsByPeriod);
     let mut query: Vec<(&str, &str)> = Vec::new();
     if needs_period {
         for (key, value) in [("startDate", &params.start_date), ("endDate", &params.end_date)] {
@@ -95,6 +107,10 @@ pub fn build_url(base: &str, endpoint: Endpoint, params: &ReadParams) -> Result<
         if !is_id(asset) {
             return Err("Invalid assetId".into());
         }
+        query.push(("assetId", asset));
+    }
+    if endpoint == Endpoint::AssetTrend {
+        let asset = params.asset_id.as_deref().filter(|v| !v.is_empty() && is_id(v)).ok_or("Invalid assetId")?;
         query.push(("assetId", asset));
     }
     if !query.is_empty() {
@@ -174,6 +190,25 @@ mod tests {
         );
         let init = build_url("http://192.168.1.2:8080", Endpoint::InitData, &ReadParams::default()).unwrap();
         assert_eq!(init.as_str(), "http://192.168.1.2:8080/moneyBook/getInitData");
+    }
+
+    #[test]
+    fn builds_phase2_read_paths() {
+        let base = "http://192.168.1.2:8080";
+        let none = ReadParams::default();
+        for (e, path) in [
+            (Endpoint::Dashboard, "getDashBoardData"),
+            (Endpoint::Assets, "getAssetData"),
+            (Endpoint::Cards, "getCardData"),
+        ] {
+            assert_eq!(build_url(base, e, &none).unwrap().as_str(), format!("{base}/moneyBook/{path}"));
+        }
+        let trend = ReadParams { asset_id: Some("cash".into()), ..ReadParams::default() };
+        assert_eq!(
+            build_url(base, Endpoint::AssetTrend, &trend).unwrap().as_str(),
+            format!("{base}/moneyBook/getEachAssetChartData?assetId=cash")
+        );
+        assert!(build_url(base, Endpoint::AssetTrend, &none).is_err());
     }
 
     #[test]
