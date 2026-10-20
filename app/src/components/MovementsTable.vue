@@ -77,8 +77,8 @@ const typeLabel = (m: Movement) => (m.type === 'unknown' ? `Other (code ${m.rawC
       </select>
       <span class="count">{{ filtered.length }} of {{ session.movements.length }}</span>
       <button :disabled="!filtered.length || exportState.kind === 'saving'" @click="exportFiltered">Export CSV</button>
-      <button class="primary" @click="draft = { kind: 'transaction' }">Add transaction</button>
-      <button @click="draft = { kind: 'transfer' }">Add transfer</button>
+      <button v-if="session.source === 'phone'" class="primary" @click="draft = { kind: 'transaction' }">Add transaction</button>
+      <button v-if="session.source === 'phone'" @click="draft = { kind: 'transfer' }">Add transfer</button>
     </div>
     <p v-if="exportState.kind === 'saved'" class="export ok" role="status">Saved {{ filtered.length }} transactions to <code>{{ exportState.text }}</code></p>
     <p v-else-if="exportState.kind === 'failed'" class="export warn" role="alert">Export failed: {{ exportState.text }}</p>
@@ -113,8 +113,10 @@ const typeLabel = (m: Movement) => (m.type === 'unknown' ? `Other (code ${m.rawC
               <td :class="m.type">{{ typeLabel(m) }}</td>
               <td :class="['num', 'amount', m.type]">{{ formatMoney(m.amount) }}</td>
               <td class="row-actions">
-                <button v-if="m.type !== 'unknown'" class="link" :aria-label="`Edit ${m.content ?? 'transaction'}`" @click="editRow(m)">Edit</button>
-                <button class="link danger-link" :aria-label="`Delete ${m.content ?? 'transaction'}`" @click="draft = { kind: 'delete-transactions', rows: [m] }">Delete</button>
+                <template v-if="session.source === 'phone'">
+                  <button v-if="m.type !== 'unknown'" class="link" :aria-label="`Edit ${m.content ?? 'transaction'}`" @click="editRow(m)">Edit</button>
+                  <button class="link danger-link" :aria-label="`Delete ${m.content ?? 'transaction'}`" @click="draft = { kind: 'delete-transactions', rows: [m] }">Delete</button>
+                </template>
               </td>
             </tr>
           </tbody>

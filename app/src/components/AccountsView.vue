@@ -62,14 +62,14 @@ watch(
         </button>
       </div>
       <p v-if="!session.assets.length" class="muted">No accounts found.</p>
-      <button class="add" @click="draft = { kind: 'asset' }">Add account</button>
+      <button v-if="session.source === 'phone'" class="add" @click="draft = { kind: 'asset' }">Add account</button>
     </nav>
 
     <div v-if="selectedItem" class="detail">
       <header>
         <h2>{{ selectedItem.name }}</h2>
         <strong class="amount">{{ formatMoney(selectedItem.balance) }}</strong>
-        <div class="acts">
+        <div v-if="session.source === 'phone'" class="acts">
           <button @click="draft = { kind: 'asset', initial: selectedItem, groupId: session.assets.find((g) => g.items.some((i) => i.id === selectedItem!.id))?.id }">Edit</button>
           <button class="danger-btn" @click="draft = { kind: 'delete-asset', id: selectedItem.id, name: selectedItem.name, isCard: false }">Delete</button>
         </div>

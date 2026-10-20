@@ -15,7 +15,7 @@ const accountName = (id?: string) =>
   <section>
     <div class="bar">
       <p v-if="!session.cards.length" class="muted">No credit cards in this book.</p>
-      <button class="primary" @click="draft = { kind: 'card' }">Add card</button>
+      <button v-if="session.source === 'phone'" class="primary" @click="draft = { kind: 'card' }">Add card</button>
     </div>
     <div v-for="g in session.cards" :key="g.id" class="group">
       <h2>{{ g.name }}</h2>
@@ -34,7 +34,7 @@ const accountName = (id?: string) =>
             <div v-if="c.closingDay"><dt>Statement closes</dt><dd>Day {{ c.closingDay }}</dd></div>
             <div v-if="c.paymentDay"><dt>Payment due</dt><dd>Day {{ c.paymentDay }}</dd></div>
           </dl>
-          <div class="acts">
+          <div v-if="session.source === 'phone'" class="acts">
             <button @click="draft = { kind: 'card', initial: c }">Edit</button>
             <button class="danger-btn" @click="draft = { kind: 'delete-asset', id: c.id, name: c.name, isCard: true }">Delete</button>
           </div>
