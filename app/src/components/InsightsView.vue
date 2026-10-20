@@ -7,6 +7,7 @@ import { formatDate, formatMoney, monthLabel } from '../domain/format'
 import BarChart from './BarChart.vue'
 import { useCountUp } from '../composables/countUp'
 import SpendingCalendar from './SpendingCalendar.vue'
+import HealthPanel from './HealthPanel.vue'
 
 const history = useHistory()
 const session = useSession()
@@ -120,6 +121,9 @@ onMounted(() => { if (history.state === 'idle') loadFromSession() })
         </div>
       </div>
 
+      <HealthPanel :r="r" :movements="history.movements" :first="first" :last="history.span.last" />
+
+      <h2 class="section">Patterns</h2>
       <div class="card wide">
         <div class="card-head">
           <h2>Income and spending by month</h2>
@@ -244,6 +248,7 @@ h1 { margin: 0; font-size: 1.6rem; letter-spacing: -0.02em; }
 h2 { font-size: 1.02rem; margin: 0; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
 .empty { color: var(--ink-soft); }
+h2.section { margin-top: 0.5rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); }
 .cats { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.7rem; }
 .cat-row, .meta { display: flex; justify-content: space-between; gap: 1rem; }
 .name small { color: var(--ink-soft); font-size: 0.78rem; margin-left: 0.3rem; }

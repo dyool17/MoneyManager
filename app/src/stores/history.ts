@@ -41,7 +41,9 @@ export const useHistory = defineStore('history', () => {
     const session = useSession()
     const last = iso(today)
     const first = shiftMonth(last.slice(0, 8) + '01', -(months - 1)).startDate
-    return load('phone', () => session.getHistory({ startDate: first, endDate: last }), first, last)
+    // Scheduled entries a year ahead feed the future commitments report.
+    const ahead = shiftMonth(last.slice(0, 8) + '01', 12).endDate
+    return load('phone', () => session.getHistory({ startDate: first, endDate: ahead }), first, last)
   }
 
   /** Offline reports from a backup file, for when the phone is not around. */
