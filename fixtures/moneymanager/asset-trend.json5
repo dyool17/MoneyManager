@@ -1,0 +1,7 @@
+{
+  assetChartData: [
+    { month: 'Jun 2026', assetMoney: '1900.00' },
+    { month: 'Jul 2026', assetMoney: '2300.00' },
+    { month: 'Aug 2026', assetMoney: '2500.00' }
+  ]
+}

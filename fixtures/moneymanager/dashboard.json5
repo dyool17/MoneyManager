@@ -1,0 +1,19 @@
+{
+  assetLine: [
+    { month: 'Jun 2026', total: '12000.00', asset: '13000.00', debt: '-1000.00' },
+    { month: 'Jul 2026', total: '13219.50', asset: '14500.00', debt: '-1280.50' },
+    { month: 'Aug 2026', total: '14400.00', asset: '15800.00', debt: '-1400.00' }
+  ],
+  assetRatio: [
+    { assetName: 'Cash', assetMoney: '2500.00' },
+    { assetName: 'Checking', assetMoney: '13300.00' }
+  ],
+  debtRatio: [
+    { assetName: 'Credit Card', assetMoney: '-1400.00' }
+  ],
+  assetSummary: {
+    totalAsset: '14400.00',
+    asset: '15800.00',
+    debt: '-1400.00'
+  }
+}

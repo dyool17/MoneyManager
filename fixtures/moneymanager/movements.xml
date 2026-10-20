@@ -1,0 +1,66 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<dataset>
+  <results>4</results>
+  <row>
+    <id>fixture-income-1</id>
+    <mbDate>2026-08-01</mbDate>
+    <assetId>checking</assetId>
+    <payType><![CDATA[Checking]]></payType>
+    <inOutCode>0</inOutCode>
+    <inOutType>Income</inOutType>
+    <mcid>income-salary</mcid>
+    <mbCategory><![CDATA[Salary]]></mbCategory>
+    <mcscid></mcscid>
+    <subCategory><![CDATA[]]></subCategory>
+    <mbContent><![CDATA[Monthly salary]]></mbContent>
+    <mbDetailContent><![CDATA[Fixture data]]></mbDetailContent>
+    <mbCash>5000.00</mbCash>
+  </row>
+  <row>
+    <id>fixture-expense-1</id>
+    <mbDate>2026-08-02</mbDate>
+    <assetId>credit</assetId>
+    <payType><![CDATA[Credit Card]]></payType>
+    <inOutCode>1</inOutCode>
+    <inOutType>Expense</inOutType>
+    <mcid>expense-variable</mcid>
+    <mbCategory><![CDATA[Variable]]></mbCategory>
+    <mcscid>food</mcscid>
+    <subCategory><![CDATA[Food]]></subCategory>
+    <mbContent><![CDATA[Groceries]]></mbContent>
+    <mbDetailContent><![CDATA[]]></mbDetailContent>
+    <mbCash>120.50</mbCash>
+  </row>
+  <row>
+    <id>fixture-transfer-out-1</id>
+    <mbDate>2026-08-03</mbDate>
+    <assetId>checking</assetId>
+    <toAssetId>cash</toAssetId>
+    <payType><![CDATA[Checking]]></payType>
+    <inOutCode>3</inOutCode>
+    <inOutType>Transfer-Out</inOutType>
+    <mcid>null</mcid>
+    <mbCategory><![CDATA[Cash]]></mbCategory>
+    <mcscid>null</mcscid>
+    <subCategory><![CDATA[]]></subCategory>
+    <mbContent><![CDATA[ATM]]></mbContent>
+    <mbDetailContent><![CDATA[]]></mbDetailContent>
+    <mbCash>-200.00</mbCash>
+  </row>
+  <row>
+    <id>fixture-transfer-in-1</id>
+    <mbDate>2026-08-03</mbDate>
+    <assetId>cash</assetId>
+    <toAssetId>checking</toAssetId>
+    <payType><![CDATA[Cash]]></payType>
+    <inOutCode>4</inOutCode>
+    <inOutType>Transfer-In</inOutType>
+    <mcid>null</mcid>
+    <mbCategory><![CDATA[Checking]]></mbCategory>
+    <mcscid>null</mcscid>
+    <subCategory><![CDATA[]]></subCategory>
+    <mbContent><![CDATA[ATM]]></mbContent>
+    <mbDetailContent><![CDATA[]]></mbDetailContent>
+    <mbCash>200.00</mbCash>
+  </row>
+</dataset>

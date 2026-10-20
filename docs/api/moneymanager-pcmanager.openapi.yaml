@@ -1,0 +1,961 @@
+openapi: 3.1.0
+info:
+  title: MoneyManager PC Manager API
+  version: v330-observed
+  description: |
+    Contrato observado del servidor local de MoneyManager PC Manager v330.
+
+    Este documento se construyó leyendo el cliente ExtJS y respuestas obtenidas
+    en modo lectura. No es una especificación oficial del servidor. Las
+    respuestas de texto contienen objetos JavaScript no estrictamente JSON y
+    deben parsearse como JSON5 o mediante un parser seguro equivalente.
+
+    Las operaciones mutables están incluidas sólo para documentar el contrato
+    futuro. No deben ser generadas ni habilitadas por el MVP read-only.
+  contact:
+    name: MoneyManager desktop rebuild
+  license:
+    name: Internal project documentation
+    identifier: internal
+servers:
+  - url: http://192.168.1.161:8080
+    description: Android PC Manager on the local network; configurable at runtime
+security: []
+tags:
+  - name: read
+    description: Operaciones observadas de lectura
+  - name: legacy-post
+    description: Operaciones de lectura/exportación que el cliente legacy envía con POST
+  - name: mutating
+    description: Operaciones que pueden modificar datos; documentadas pero bloqueadas
+paths:
+  /moneyBook/getInitData:
+    get:
+      tags: [read]
+      operationId: getInitData
+      summary: Obtener configuración del libro
+      description: Devuelve libros, categorías, cuentas, grupos de activos y textos de tipo de movimiento.
+      x-mutability: read
+      responses:
+        '200':
+          description: Objeto JavaScript no estricto enviado como text/plain.
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Raw JavaScript object literal; parse as JSON5, never eval.
+              examples:
+                representative:
+                  externalValue: ../../fixtures/moneymanager/init-data.json5
+          x-parsed-schema:
+            $ref: '#/components/schemas/InitDataResponse'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+    post:
+      tags: [legacy-post]
+      operationId: getInitDataLegacyPost
+      summary: Obtener configuración mediante POST legacy
+      description: Variante usada por el formulario de activos después de una mutación. Documentada para compatibilidad; bloqueada en el cliente read-only.
+      x-mutability: read
+      x-enabled-in-readonly-client: false
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InitDataPostForm'
+      responses:
+        '200':
+          $ref: '#/components/responses/LegacyTextSuccess'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/getDataByPeriod:
+    get:
+      tags: [read]
+      operationId: getDataByPeriod
+      summary: Obtener movimientos por período
+      description: |
+        Devuelve XML con gastos, ingresos y transferencias. El cliente legacy
+        no usa paginación; para rangos grandes se recomienda consultar por mes,
+        combinar y deduplicar por id.
+      x-mutability: read
+      parameters:
+        - $ref: '#/components/parameters/StartDateQuery'
+        - $ref: '#/components/parameters/EndDateQuery'
+        - $ref: '#/components/parameters/MbidQuery'
+        - $ref: '#/components/parameters/AssetIdQuery'
+      responses:
+        '200':
+          description: Dataset XML de movimientos.
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/MovementDataset'
+              examples:
+                representative:
+                  externalValue: ../../fixtures/moneymanager/movements.xml
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/getSummaryDataByPeriod:
+    get:
+      tags: [read]
+      operationId: getSummaryDataByPeriod
+      summary: Obtener resumen de un período
+      x-mutability: read
+      parameters:
+        - $ref: '#/components/parameters/StartDateQuery'
+        - $ref: '#/components/parameters/EndDateQuery'
+        - $ref: '#/components/parameters/MbidQuery'
+      responses:
+        '200':
+          description: Objeto JavaScript no estricto enviado como text/plain.
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Raw JavaScript object literal; parse as JSON5, never eval.
+              examples:
+                representative:
+                  externalValue: ../../fixtures/moneymanager/summary.json5
+          x-parsed-schema:
+            $ref: '#/components/schemas/SummaryResponse'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/getDashBoardData:
+    get:
+      tags: [read]
+      operationId: getDashboardData
+      summary: Obtener estadísticas globales de activos
+      x-mutability: read
+      responses:
+        '200':
+          description: Objeto JavaScript no estricto enviado como text/plain.
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Raw JavaScript object literal; parse as JSON5, never eval.
+              examples:
+                representative:
+                  externalValue: ../../fixtures/moneymanager/dashboard.json5
+          x-parsed-schema:
+            $ref: '#/components/schemas/DashboardResponse'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/getAssetData:
+    get:
+      tags: [read]
+      operationId: getAssetData
+      summary: Obtener árbol de activos
+      x-mutability: read
+      responses:
+        '200':
+          description: Array de nodos de activos en objeto JavaScript no estricto.
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Raw JavaScript array; parse as JSON5, never eval.
+              examples:
+                representative:
+                  externalValue: ../../fixtures/moneymanager/assets.json5
+          x-parsed-schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/AssetNode'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/getCardData:
+    get:
+      tags: [read]
+      operationId: getCardData
+      summary: Obtener árbol de tarjetas de crédito
+      x-mutability: read
+      responses:
+        '200':
+          description: Array de nodos de tarjetas en objeto JavaScript no estricto.
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Raw JavaScript array; parse as JSON5, never eval.
+              examples:
+                representative:
+                  externalValue: ../../fixtures/moneymanager/cards.json5
+          x-parsed-schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/CardNode'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/getEachAssetChartData:
+    get:
+      tags: [read]
+      operationId: getEachAssetChartData
+      summary: Obtener tendencia histórica de un activo
+      description: |
+        El cliente legacy v330 declara esta operación como POST, pero el
+        servidor observado respondió correctamente a GET. El cliente nuevo
+        read-only debe usar únicamente esta variante GET.
+      x-mutability: read
+      x-legacy-client-method: POST
+      parameters:
+        - $ref: '#/components/parameters/AssetIdRequiredQuery'
+      responses:
+        '200':
+          description: Objeto JavaScript no estricto enviado como text/plain.
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Raw JavaScript object literal; parse as JSON5, never eval.
+              examples:
+                representative:
+                  externalValue: ../../fixtures/moneymanager/asset-trend.json5
+          x-parsed-schema:
+            $ref: '#/components/schemas/AssetTrendResponse'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+    post:
+      tags: [legacy-post]
+      operationId: getEachAssetChartDataLegacyPost
+      summary: Obtener tendencia mediante POST legacy
+      description: Variante declarada por assetDetailList.js. No usar mientras exista la variante GET funcional.
+      x-mutability: read
+      x-enabled-in-readonly-client: false
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssetTrendPostForm'
+      responses:
+        '200':
+          $ref: '#/components/responses/LegacyTextSuccess'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/money.sqlite:
+    get:
+      tags: [read]
+      operationId: downloadBackupObserved
+      summary: Descargar respaldo SQLite
+      description: |
+        Ruta de descarga observada en la pantalla de configuración. En la
+        inspección actual respondió 200 con cuerpo vacío, por lo que no forma
+        parte del MVP ni debe considerarse un contrato funcional confirmado.
+      x-mutability: read
+      x-contract-status: observed-but-unverified
+      responses:
+        '200':
+          description: Cuerpo binario de respaldo, vacío en la observación actual.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/getExcelFile:
+    post:
+      tags: [legacy-post]
+      operationId: exportExcelLegacy
+      summary: Exportar movimientos a Excel
+      description: Exportación iniciada por un formulario HTML. No modifica los datos, pero usa POST y queda fuera de la garantía GET-only del MVP.
+      x-mutability: export
+      x-enabled-in-readonly-client: false
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExcelExportForm'
+      responses:
+        '200':
+          description: Archivo Excel o respuesta de error; no se verificó sin ejecutar la operación.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/create:
+    post:
+      tags: [mutating]
+      operationId: createMovement
+      summary: Crear movimiento
+      description: Contrato observado en moneybook.js. Nunca invocado durante el reconocimiento.
+      x-mutability: write
+      x-enabled-in-readonly-client: false
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MovementWriteForm'
+      responses:
+        '200':
+          $ref: '#/components/responses/UnknownWriteSuccess'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/update:
+    post:
+      tags: [mutating]
+      operationId: updateMovement
+      summary: Actualizar movimiento
+      description: Contrato observado en moneybook.js. Nunca invocado durante el reconocimiento.
+      x-mutability: write
+      x-enabled-in-readonly-client: false
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MovementWriteForm'
+      responses:
+        '200':
+          $ref: '#/components/responses/UnknownWriteSuccess'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/delete:
+    post:
+      tags: [mutating]
+      operationId: deleteMovements
+      summary: Eliminar movimientos
+      description: Recibe ids concatenados por dos puntos, según el cliente legacy.
+      x-mutability: destructive
+      x-enabled-in-readonly-client: false
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeleteMovementsForm'
+      responses:
+        '200':
+          $ref: '#/components/responses/UnknownWriteSuccess'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/removeAsset:
+    post:
+      tags: [mutating]
+      operationId: removeAsset
+      summary: Eliminar activo o tarjeta
+      x-mutability: destructive
+      x-enabled-in-readonly-client: false
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssetIdForm'
+      responses:
+        '200':
+          $ref: '#/components/responses/UnknownWriteSuccess'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/assetAdd:
+    post:
+      tags: [mutating]
+      operationId: addAsset
+      summary: Crear activo
+      x-mutability: write
+      x-enabled-in-readonly-client: false
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssetAddForm'
+      responses:
+        '200':
+          $ref: '#/components/responses/UnknownWriteSuccess'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/assetModify:
+    post:
+      tags: [mutating]
+      operationId: modifyAsset
+      summary: Modificar activo
+      x-mutability: write
+      x-enabled-in-readonly-client: false
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssetModifyForm'
+      responses:
+        '200':
+          $ref: '#/components/responses/UnknownWriteSuccess'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/addAssetCard:
+    post:
+      tags: [mutating]
+      operationId: addAssetCard
+      summary: Crear tarjeta de crédito
+      x-mutability: write
+      x-enabled-in-readonly-client: false
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssetCardAddForm'
+      responses:
+        '200':
+          $ref: '#/components/responses/UnknownWriteSuccess'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/modifyCard:
+    post:
+      tags: [mutating]
+      operationId: modifyAssetCard
+      summary: Modificar tarjeta de crédito
+      x-mutability: write
+      x-enabled-in-readonly-client: false
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssetCardModifyForm'
+      responses:
+        '200':
+          $ref: '#/components/responses/UnknownWriteSuccess'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/moveAsset:
+    post:
+      tags: [mutating]
+      operationId: moveAsset
+      summary: Crear transferencia entre activos
+      x-mutability: write
+      x-enabled-in-readonly-client: false
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssetMoveForm'
+      responses:
+        '200':
+          $ref: '#/components/responses/UnknownWriteSuccess'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/modifyMoveAsset:
+    post:
+      tags: [mutating]
+      operationId: modifyAssetMove
+      summary: Modificar transferencia entre activos
+      x-mutability: write
+      x-enabled-in-readonly-client: false
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssetMoveForm'
+      responses:
+        '200':
+          $ref: '#/components/responses/UnknownWriteSuccess'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+  /moneyBook/uploadSqlFile:
+    post:
+      tags: [mutating]
+      operationId: uploadSqlBackup
+      summary: Restaurar respaldo SQLite
+      description: Operación potencialmente destructiva. El cliente legacy exige un archivo, pero no declara validación MIME o extensión.
+      x-mutability: destructive
+      x-enabled-in-readonly-client: false
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SqlUploadForm'
+      responses:
+        '200':
+          $ref: '#/components/responses/UnknownWriteSuccess'
+        default:
+          $ref: '#/components/responses/UnknownTextError'
+
+components:
+  parameters:
+    StartDateQuery:
+      name: startDate
+      in: query
+      required: true
+      description: Fecha inicial inclusiva con formato Y-m-d.
+      schema:
+        type: string
+        format: date
+        pattern: '^\\d{4}-\\d{2}-\\d{2}$'
+    EndDateQuery:
+      name: endDate
+      in: query
+      required: true
+      description: Fecha final inclusiva con formato Y-m-d.
+      schema:
+        type: string
+        format: date
+        pattern: '^\\d{4}-\\d{2}-\\d{2}$'
+    MbidQuery:
+      name: mbid
+      in: query
+      required: true
+      description: Identificador del libro. El servidor observado no lo validó como frontera de aislamiento.
+      schema:
+        type: string
+        minLength: 1
+    AssetIdQuery:
+      name: assetId
+      in: query
+      required: false
+      allowEmptyValue: true
+      description: Identificador del activo; el cliente envía cadena vacía para consultar todos.
+      schema:
+        type: string
+    AssetIdRequiredQuery:
+      name: assetId
+      in: query
+      required: true
+      description: Identificador del activo.
+      schema:
+        type: string
+        minLength: 1
+
+  responses:
+    LegacyTextSuccess:
+      description: Respuesta de texto no normalizada del servidor legacy.
+      content:
+        text/plain:
+          schema:
+            type: string
+    UnknownWriteSuccess:
+      description: Respuesta no capturada porque la operación no fue invocada.
+      content:
+        text/plain:
+          schema:
+            type: string
+    UnknownTextError:
+      description: Error no normalizado observado del servidor legacy.
+      content:
+        text/plain:
+          schema:
+            type: string
+
+  schemas:
+    InitDataResponse:
+      type: object
+      required: [initData, multiBooks, category_0, category_1, inOutText, payType, assetGroups, assetNames]
+      properties:
+        initData:
+          $ref: '#/components/schemas/InitData'
+        multiBooks:
+          type: array
+          items:
+            $ref: '#/components/schemas/MultiBook'
+        category_0:
+          type: array
+          description: Categorías de ingresos.
+          items:
+            $ref: '#/components/schemas/Category'
+        category_1:
+          type: array
+          description: Categorías de gastos.
+          items:
+            $ref: '#/components/schemas/Category'
+        inOutText:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        payType:
+          type: array
+          items:
+            $ref: '#/components/schemas/NamedId'
+        assetGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetGroup'
+        assetNames:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetName'
+
+    InitData:
+      type: object
+      required: [initStartDate, initEndDate, mbid]
+      properties:
+        initStartDate:
+          type: string
+          format: date
+        initEndDate:
+          type: string
+          format: date
+        mbid:
+          type: string
+        mbName:
+          type: string
+
+    MultiBook:
+      type: object
+      required: [mbid, mbname]
+      properties:
+        mbid: {type: string}
+        mbname: {type: string}
+        baseDate: {type: string}
+
+    NamedId:
+      type: object
+      required: [ptid, ptname]
+      properties:
+        ptid: {type: string}
+        ptname: {type: string}
+
+    Category:
+      type: object
+      required: [mcid, mcname, mcsc]
+      properties:
+        mcid: {type: string}
+        mcname: {type: string}
+        mcsc:
+          type: array
+          items:
+            type: object
+            required: [mcscid, mcscname]
+            properties:
+              mcscid: {type: string}
+              mcscname: {type: string}
+
+    AssetGroup:
+      type: object
+      required: [assetGroupId, assetType, assetName]
+      properties:
+        assetGroupId: {type: string}
+        assetType: {type: string, enum: [group]}
+        assetName: {type: string}
+
+    AssetName:
+      type: object
+      required: [assetType, assetId, assetName]
+      properties:
+        assetType: {type: string, enum: [item]}
+        assetId: {type: string}
+        assetName: {type: string}
+
+    MovementDataset:
+      type: object
+      xml:
+        name: dataset
+      required: [results]
+      properties:
+        results:
+          type: integer
+          xml:
+            name: results
+        row:
+          type: array
+          xml:
+            name: row
+            wrapped: false
+          items:
+            $ref: '#/components/schemas/MovementRecord'
+
+    MovementRecord:
+      type: object
+      xml:
+        name: row
+      required: [id, mbDate, assetId, payType, inOutCode, inOutType, mbCash]
+      properties:
+        id: {type: string}
+        mbDate: {type: string, format: date}
+        assetId: {type: string}
+        toAssetId: {type: [string, 'null']}
+        targetAssetId: {type: [string, 'null']}
+        payType: {type: string}
+        mcid: {type: [string, 'null']}
+        mbCategory: {type: [string, 'null']}
+        mcscid: {type: [string, 'null']}
+        subCategory: {type: [string, 'null']}
+        mbContent: {type: [string, 'null']}
+        mbCash: {type: number}
+        inOutCode: {type: string, enum: ['0', '1', '2', '3', '4', '7', '8']}
+        inOutType: {type: string}
+        mbDetailContent: {type: [string, 'null']}
+
+    SummaryResponse:
+      type: object
+      required: [summary, income, outcome]
+      properties:
+        summary:
+          type: object
+          required: [startDate, endDate, income, outcome, cash, card, sum]
+          properties:
+            startDate: {type: string, format: date}
+            endDate: {type: string, format: date}
+            income: {type: number}
+            outcome: {type: number}
+            cash: {type: number}
+            card: {type: number}
+            etcExpenseOpt: {type: boolean}
+            etcExpense: {type: number}
+            sum: {type: number}
+        income:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetLine'
+        outcome:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetLine'
+
+    BudgetLine:
+      type: object
+      required: [mcname, mcSum, budget]
+      properties:
+        mcname: {type: string}
+        mcSum: {type: number}
+        budget: {type: number}
+
+    DashboardResponse:
+      type: object
+      required: [assetLine, assetRatio, debtRatio, assetSummary]
+      properties:
+        assetLine:
+          type: array
+          items:
+            type: object
+            required: [month, total, asset, debt]
+            properties:
+              month: {type: string}
+              total: {type: number}
+              asset: {type: number}
+              debt: {type: number}
+        assetRatio:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetMoneyLine'
+        debtRatio:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetMoneyLine'
+        assetSummary:
+          type: object
+          required: [totalAsset, asset, debt]
+          properties:
+            totalAsset: {type: number}
+            asset: {type: number}
+            debt: {type: number}
+
+    AssetMoneyLine:
+      type: object
+      required: [assetName, assetMoney]
+      properties:
+        assetName: {type: string}
+        assetMoney: {type: number}
+
+    AssetNode:
+      type: object
+      required: [assetName, assetGroupId, assetType]
+      properties:
+        assetName: {type: string}
+        assetGroupId: {type: string}
+        assetMoney: {type: number}
+        assetType: {type: string, enum: [group, item]}
+        assetId: {type: string}
+        color: {type: string}
+        leaf: {type: boolean}
+        iconCls: {type: string}
+        expanded: {type: boolean}
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetNode'
+
+    CardNode:
+      allOf:
+        - $ref: '#/components/schemas/AssetNode'
+        - type: object
+          properties:
+            notPayMoney: {type: number}
+            linkAssetId: {type: string}
+            jungsanDay: {type: string}
+            paymentDay: {type: string}
+
+    AssetTrendResponse:
+      type: object
+      required: [assetChartData]
+      properties:
+        assetChartData:
+          type: array
+          items:
+            type: object
+            required: [month, assetMoney]
+            properties:
+              month: {type: string}
+              assetMoney: {type: number}
+
+    MovementWriteForm:
+      type: object
+      description: Campos enviados por Ext.Ajax.params. Required refleja la UI, no una garantía del servidor.
+      x-client-required: [mbDate, assetId, payType, mcid, mbCash]
+      properties:
+        id: {type: string}
+        mbDate: {type: string, format: date}
+        assetId: {type: string}
+        toAssetId: {type: string}
+        targetAssetId: {type: string}
+        payType: {type: string}
+        mcid: {type: string}
+        mbCategory: {type: string}
+        mcscid: {type: string}
+        subCategory: {type: string}
+        mbContent: {type: string}
+        mbCash: {type: number}
+        inOutCode: {type: string}
+        inOutType: {type: string}
+        mbDetailContent: {type: string}
+
+    DeleteMovementsForm:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: string
+          minLength: 2
+          pattern: '^(:[^:]+)+$'
+          description: IDs concatenados con dos puntos, por ejemplo :id-1:id-2.
+
+    AssetIdForm:
+      type: object
+      required: [assetId]
+      properties:
+        assetId: {type: string, minLength: 1}
+
+    InitDataPostForm:
+      type: object
+      required: [mbid]
+      properties:
+        mbid: {type: string, minLength: 1}
+
+    AssetTrendPostForm:
+      type: object
+      required: [assetId]
+      properties:
+        assetId: {type: string, minLength: 1}
+
+    ExcelExportForm:
+      type: object
+      required: [startDate, endDate, mbid]
+      properties:
+        startDate: {type: string, format: date}
+        endDate: {type: string, format: date}
+        mbid: {type: string}
+        assetId: {type: string}
+        inOutType: {type: string}
+
+    AssetAddForm:
+      type: object
+      description: Formulario de alta de activo observado en asset.js.
+      x-client-required: [assetGroupName, assetGroupId, assetName, assetMoney]
+      properties:
+        assetGroupName: {type: string}
+        assetGroupId: {type: string}
+        assetName: {type: string}
+        linkAssetName: {type: string}
+        linkAssetId: {type: string}
+        assetMoney: {type: number}
+
+    AssetModifyForm:
+      type: object
+      description: Formulario de modificación de activo observado en asset.js.
+      x-client-required: [assetGroupName, assetGroupId, assetName, assetId, assetMoney]
+      properties:
+        assetGroupName: {type: string}
+        assetGroupId: {type: string}
+        assetName: {type: string}
+        assetId: {type: string}
+        linkAssetName: {type: string}
+        linkAssetId: {type: string}
+        assetMoney: {type: number}
+
+    AssetCardAddForm:
+      type: object
+      description: Formulario de alta de tarjeta observado en asset.js.
+      x-client-required: [cardName, linkAssetId, notPayMoney]
+      properties:
+        cardName: {type: string}
+        linkAssetName: {type: string}
+        linkAssetId: {type: string}
+        notPayMoney: {type: number}
+        jungsanDay:
+          type: number
+          description: UI placeholder says 1 ~ 31; no client-side min/max validator was observed.
+        paymentDay:
+          type: number
+          description: UI placeholder says 1 ~ 31; no client-side min/max validator was observed.
+
+    AssetCardModifyForm:
+      type: object
+      description: Formulario de modificación de tarjeta observado en asset.js.
+      x-client-required: [assetId, linkAssetId]
+      properties:
+        cardName: {type: string, readOnly: true}
+        assetId: {type: string}
+        linkAssetName: {type: string}
+        linkAssetId: {type: string}
+        jungsanDay:
+          type: number
+          description: No client-side min/max validator was observed.
+        paymentDay:
+          type: number
+          description: No client-side min/max validator was observed.
+
+    AssetMoveForm:
+      type: object
+      description: Formulario de transferencia observado en asset.js.
+      x-client-required: [moveDate, fromAssetId, toAssetId, moveMoney]
+      properties:
+        id: {type: string}
+        moveDate: {type: string, format: date}
+        fromAssetName: {type: string}
+        fromAssetId: {type: string}
+        toAssetName: {type: string}
+        toAssetId: {type: string}
+        moveMoney: {type: number}
+        moneyContent: {type: string}
+        mbDetailContent: {type: string}
+
+    SqlUploadForm:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: El cliente muestra money.sqlite como texto, pero no declara accept/MIME validation.

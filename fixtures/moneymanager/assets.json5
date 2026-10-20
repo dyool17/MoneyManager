@@ -1,0 +1,40 @@
+[
+  {
+    assetName: 'Cash',
+    assetGroupId: 'cash-group',
+    assetMoney: '2500.00',
+    assetType: 'group',
+    iconCls: 'task-folder',
+    expanded: true,
+    children: [
+      {
+        assetType: 'item',
+        assetId: 'cash',
+        assetName: 'Cash',
+        assetMoney: '2500.00',
+        color: '#4169e1',
+        leaf: true,
+        iconCls: 'task'
+      }
+    ]
+  },
+  {
+    assetName: 'Accounts',
+    assetGroupId: 'account-group',
+    assetMoney: '13300.00',
+    assetType: 'group',
+    iconCls: 'task-folder',
+    expanded: true,
+    children: [
+      {
+        assetType: 'item',
+        assetId: 'checking',
+        assetName: 'Checking',
+        assetMoney: '13300.00',
+        color: '#4169e1',
+        leaf: true,
+        iconCls: 'task'
+      }
+    ]
+  }
+]

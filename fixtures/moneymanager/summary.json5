@@ -1,0 +1,20 @@
+{
+  summary: {
+    startDate: '2026-08-01',
+    endDate: '2026-08-31',
+    income: '5000.00',
+    outcome: '1780.50',
+    cash: '650.00',
+    card: '1130.50',
+    etcExpenseOpt: false,
+    etcExpense: '0',
+    sum: '3219.50'
+  },
+  income: [
+    { mcname: 'Salary', mcSum: '5000.00', budget: '0' }
+  ],
+  outcome: [
+    { mcname: 'Fixed', mcSum: '980.50', budget: '1000.00' },
+    { mcname: 'Variable', mcSum: '800.00', budget: '1200.00' }
+  ]
+}

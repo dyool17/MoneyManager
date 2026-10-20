@@ -1,0 +1,26 @@
+[
+  {
+    assetGroupId: 'credit-group',
+    assetName: 'Credit Cards',
+    assetMoney: '0.0',
+    notPayMoney: '0.0',
+    assetType: 'group',
+    iconCls: 'task-folder',
+    expanded: true,
+    children: [
+      {
+        assetId: 'credit',
+        assetType: 'item',
+        assetName: 'Credit Card',
+        color: '#dc143c',
+        linkAssetId: 'checking',
+        jungsanDay: '1',
+        paymentDay: '15',
+        assetMoney: '-0.0',
+        notPayMoney: '1400.00',
+        leaf: true,
+        iconCls: 'task'
+      }
+    ]
+  }
+]

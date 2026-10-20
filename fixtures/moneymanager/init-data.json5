@@ -1,0 +1,48 @@
+{
+  initData: {
+    initStartDate: '2026-08-01',
+    initEndDate: '2026-08-31',
+    mbid: '1',
+    mbName: 'Demo Book'
+  },
+  multiBooks: [
+    { mbid: '1', mbname: 'Demo Book', baseDate: '1' }
+  ],
+  category_0: [
+    { mcid: 'income-salary', mcname: 'Salary', mcsc: [] },
+    { mcid: 'income-other', mcname: 'Other income', mcsc: [] }
+  ],
+  category_1: [
+    {
+      mcid: 'expense-fixed',
+      mcname: 'Fixed',
+      mcsc: [
+        { mcscid: 'housing', mcscname: 'Housing' },
+        { mcscid: 'services', mcscname: 'Services' }
+      ]
+    },
+    {
+      mcid: 'expense-variable',
+      mcname: 'Variable',
+      mcsc: [
+        { mcscid: 'food', mcscname: 'Food' },
+        { mcscid: 'transport', mcscname: 'Transport' }
+      ]
+    }
+  ],
+  inOutText: [['Expense'], ['Income']],
+  payType: [
+    { ptid: 'cash', ptname: 'Cash' },
+    { ptid: 'checking', ptname: 'Checking' },
+    { ptid: 'credit', ptname: 'Credit Card' }
+  ],
+  assetGroups: [
+    { assetGroupId: 'cash-group', assetType: 'group', assetName: 'Cash' },
+    { assetGroupId: 'account-group', assetType: 'group', assetName: 'Accounts' }
+  ],
+  assetNames: [
+    { assetType: 'item', assetId: 'cash', assetName: 'Cash' },
+    { assetType: 'item', assetId: 'checking', assetName: 'Checking' },
+    { assetType: 'item', assetId: 'credit', assetName: 'Credit Card' }
+  ]
+}
