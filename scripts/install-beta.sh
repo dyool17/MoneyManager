@@ -23,7 +23,7 @@ cat > "$HOME/.local/share/applications/money-manager.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Money Manager
-Comment=Read your Money Manager data on the desktop (beta)
+Comment=Read and edit your Money Manager data on the desktop (beta)
 Exec=$OPT/MoneyManager.AppImage
 Icon=money-manager
 Categories=Office;Finance;

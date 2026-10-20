@@ -83,3 +83,7 @@ Ejemplos de cambios que la app todavía no cubre: restaurar un respaldo sobre el
 | "Address must include the port" | Escribe la dirección completa con `:puerto`. |
 | "Host must be on the local network" | La app sólo acepta IPs locales (`192.168.x.x`, `10.x.x.x`, `172.16–31.x.x`). |
 | "The phone sent an empty full backup" | El teléfono no entregó `money.sqlite`; sólo quedó el snapshot legible. |
+| "Take a backup before changing data on the phone" | Ve a **Connect phone** y pulsa **Back up now**. El respaldo caduca a los 30 minutos. |
+| "The phone did not confirm the change" | El teléfono respondió algo que la app no reconoce. Revisa el teléfono antes de reintentar: el cambio pudo aplicarse. |
+| "The phone rejected the change" | El teléfono rechazó la operación. El motivo aparece en el mensaje. |
+| "This backup does not match any loaded accounts" | El respaldo es de otro teléfono o de otro libro. Exporta uno nuevo desde el móvil. |
