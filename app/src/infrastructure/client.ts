@@ -202,7 +202,30 @@ export type WriteOp =
   | { op: 'create-card'; fields: CardFields; outstanding: number }
   | { op: 'update-card'; assetId: string; fields: CardFields }
 
+/** Why a write failed. `offline` means the request never left this computer. */
+export type WriteErrorKind =
+  | 'invalid'
+  | 'backup-required'
+  | 'offline'
+  | 'timeout'
+  | 'http'
+  | 'rejected'
+  | 'unconfirmed'
+
+export class WriteError extends Error {
+  constructor(readonly kind: WriteErrorKind, message: string) {
+    super(message)
+    this.name = 'WriteError'
+  }
+}
+
 /** Applies one change on the phone. Rust refuses it without a recent backup. */
-export function applyWrite(baseUrl: string, op: WriteOp): Promise<void> {
-  return invoke<void>('mm_write', { baseUrl, op })
+export async function applyWrite(baseUrl: string, op: WriteOp): Promise<void> {
+  try {
+    await invoke<void>('mm_write', { baseUrl, op })
+  } catch (e) {
+    const raw = e as { kind?: string; message?: string }
+    const kind = (raw?.kind ?? 'http') as WriteErrorKind
+    throw new WriteError(kind, raw?.message ?? String(e))
+  }
 }

@@ -75,6 +75,47 @@ fn log_write(app: &tauri::AppHandle, entry: &WriteLog) {
     }
 }
 
+/// Why a write failed. The kind tells the app whether the change can be sent
+/// again later: only `offline` is safe to retry, because the request never
+/// reached the phone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum WriteErrorKind {
+    /// The change was rejected before any request was sent.
+    Invalid,
+    /// No recent backup exists for this phone.
+    BackupRequired,
+    /// The phone could not be reached, so the request never left this computer.
+    Offline,
+    /// The phone accepted the request but did not answer in time.
+    Timeout,
+    /// The phone answered with an HTTP error.
+    Http,
+    /// The phone answered that it refused the change.
+    Rejected,
+    /// The phone answered something the app cannot recognise.
+    Unconfirmed,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WriteError {
+    pub kind: WriteErrorKind,
+    pub message: String,
+}
+
+impl WriteError {
+    fn new(kind: WriteErrorKind, message: impl Into<String>) -> Self {
+        Self { kind, message: message.into() }
+    }
+}
+
+impl std::fmt::Display for WriteError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
 /// Applies one typed change on the phone, after checking a recent backup exists.
 #[tauri::command]
 async fn mm_write(
@@ -82,14 +123,18 @@ async fn mm_write(
     state: tauri::State<'_, PcManager>,
     base_url: String,
     op: writes::WriteOp,
-) -> Result<(), String> {
-    let req = op.request()?;
-    state.require_recent_backup(&base_url, pcmanager::BACKUP_MAX_AGE)?;
+) -> Result<(), WriteError> {
+    let req = op
+        .request()
+        .map_err(|e| WriteError::new(WriteErrorKind::Invalid, e))?;
+    state
+        .require_recent_backup(&base_url, pcmanager::BACKUP_MAX_AGE)
+        .map_err(|e| WriteError::new(WriteErrorKind::BackupRequired, e))?;
     let result = state.write(&base_url, &req).await;
     let at = chrono::Local::now().to_rfc3339();
     let (outcome, error) = match &result {
         Ok(_) => ("applied", None),
-        Err(e) => ("failed", Some(e.as_str())),
+        Err(e) => ("failed", Some(e.message.as_str())),
     };
     log_write(&app, &WriteLog { at, phone: &base_url, op: &op, outcome, error });
     result.map(|_| ())

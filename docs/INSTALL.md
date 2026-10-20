@@ -75,6 +75,19 @@ Reglas de seguridad:
 
 Ejemplos de cambios que la app todavía no cubre: restaurar un respaldo sobre el teléfono, cambiar categorías o presupuestos, y exportar a Excel.
 
+## Cambios pendientes (outbox)
+
+**PC Manager se apaga cuando bloqueas el móvil o cambias de aplicación.** Por eso la app no pierde tus cambios: los que no pudieron salir quedan en un *outbox* local.
+
+| Situación | Qué hace la app |
+|---|---|
+| El móvil está apagado o bloqueado al confirmar | El cambio **no se envía**: se guarda en este computador y el diálogo dice «Saved on this computer, not sent yet». |
+| Vuelve el móvil | Abre **Pending changes** y pulsa **Sync pending changes**. Necesita un respaldo reciente, así que primero **Back up now**. |
+| El móvil no responde a tiempo | El cambio queda en «Check on the phone»: puede haberse aplicado, así que **nunca se reenvía solo**. Revísalo en el móvil y márcalo como revisado. |
+| El móvil rechaza el cambio | Se informa el motivo y no queda pendiente. |
+
+Nunca se reenvía un cambio cuyo resultado se desconoce: podría duplicar el movimiento. El outbox se guarda en este computador (`localStorage`) y se vacía solo cuando los cambios se envían o los marcas como revisados.
+
 ## Problemas frecuentes
 
 | Mensaje | Qué hacer |
@@ -88,3 +101,4 @@ Ejemplos de cambios que la app todavía no cubre: restaurar un respaldo sobre el
 | "The phone rejected the change" | El teléfono rechazó la operación. El motivo aparece en el mensaje. |
 | "This backup does not match any loaded accounts" | El respaldo es de otro teléfono o de otro libro. Exporta uno nuevo desde el móvil. |
 | "PC Manager did not answer in time" | El servidor del móvil se cuelga con algunos periodos de fechas. La app ensancha la consulta y filtra el resultado; si persiste, reinicia PC Manager en el teléfono. |
+| "PC Manager is not reachable" | El móvil está bloqueado, cerraste la app o cambiaste de aplicación. Vuelve a Money Manager, deja PC Manager iniciado y mantén la pantalla encendida. |

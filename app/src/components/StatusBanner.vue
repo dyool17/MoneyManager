@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useSession } from '../stores/session'
+import { useOutbox } from '../stores/outbox'
 const session = useSession()
+const outbox = useOutbox()
 </script>
 
 <template>
@@ -8,8 +10,13 @@ const session = useSession()
   <div v-else-if="session.error" class="banner" role="alert">
     <strong>{{ session.status === 'invalid-response' ? 'The phone sent data this app cannot read.' : 'Could not load data.' }}</strong>
     <span>{{ session.error }}</span>
+    <span v-if="session.source === 'phone'">PC Manager stops when the phone is locked or you switch apps. Open Money Manager on the phone and keep it on screen.</span>
     <span>The figures below are from the last successful load.</span>
     <button @click="session.refresh()">Try again</button>
+  </div>
+  <div v-else-if="outbox.pending.length" class="banner pending" role="status">
+    <strong>{{ outbox.pending.length }} change(s) waiting for the phone.</strong>
+    <span>They were not sent. Open Money Manager on the phone and use <b>Sync pending changes</b>.</span>
   </div>
 </template>
 
@@ -27,4 +34,5 @@ const session = useSession()
 }
 .banner button { margin-left: auto; }
 .quiet { background: transparent; color: var(--ink-soft); padding: 0 0 0.75rem; }
+.pending { background: var(--warn-bg); color: var(--warn-ink); }
 </style>

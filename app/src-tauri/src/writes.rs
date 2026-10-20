@@ -475,7 +475,7 @@ mod e2e {
         let pc = PcManager::new();
         let req = op().request().unwrap();
         let err = tauri::async_runtime::block_on(pc.write(&base, &req)).unwrap_err();
-        assert!(err.contains("rejected"), "{err}");
+        assert!(err.message.contains("rejected"), "{err}");
         let requests = seen.lock().unwrap().clone();
         assert_eq!(requests.len(), 1, "writes must never be retried");
         assert!(requests[0].starts_with("POST /moneyBook/delete "));
@@ -495,7 +495,7 @@ mod e2e {
         let (base, seen) = server("ERROR");
         let pc = PcManager::new();
         let err = tauri::async_runtime::block_on(pc.write(&base, &op().request().unwrap())).unwrap_err();
-        assert!(err.contains("did not confirm"), "{err}");
+        assert!(err.message.contains("did not confirm"), "{err}");
         assert_eq!(seen.lock().unwrap().len(), 1, "writes must never be retried");
     }
 
@@ -504,6 +504,27 @@ mod e2e {
         let (base, _) = server("{ success: true }");
         let pc = PcManager::new();
         assert!(tauri::async_runtime::block_on(pc.write(&base, &op().request().unwrap())).is_ok());
+    }
+
+    #[test]
+    fn error_kinds_separate_never_sent_from_unknown_outcome() {
+        use crate::WriteErrorKind;
+        let pc = PcManager::new();
+
+        // Nothing listening: the request never left, so it can be sent later.
+        let dead = "http://127.0.0.1:1";
+        let err = tauri::async_runtime::block_on(pc.write(dead, &op().request().unwrap())).unwrap_err();
+        assert_eq!(err.kind, WriteErrorKind::Offline, "{}", err.message);
+
+        // A body the app cannot recognise may or may not have been applied.
+        let (base, _) = server("ERROR");
+        let err = tauri::async_runtime::block_on(pc.write(&base, &op().request().unwrap())).unwrap_err();
+        assert_eq!(err.kind, WriteErrorKind::Unconfirmed, "{}", err.message);
+
+        // An explicit refusal is a refusal, not an unknown outcome.
+        let (base, _) = server("{ success: false }");
+        let err = tauri::async_runtime::block_on(pc.write(&base, &op().request().unwrap())).unwrap_err();
+        assert_eq!(err.kind, WriteErrorKind::Rejected, "{}", err.message);
     }
 
     #[test]
