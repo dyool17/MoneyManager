@@ -1,0 +1,4 @@
+# Private native phone backups must never be versioned.
+*.mmbak
+*.sqlite
+*.sqlite3
