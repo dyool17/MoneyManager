@@ -12,13 +12,15 @@ import CardsView from './components/CardsView.vue'
 import BudgetsView from './components/BudgetsView.vue'
 import AccountMetadataView from './components/AccountMetadataView.vue'
 import PendingChanges from './components/PendingChanges.vue'
+import InsightsView from './components/InsightsView.vue'
 
-type View = 'networth' | 'summary' | 'budgets' | 'movements' | 'accounts' | 'cards' | 'connection' | 'metadata'
+type View = 'insights' | 'networth' | 'summary' | 'budgets' | 'movements' | 'accounts' | 'cards' | 'connection' | 'metadata'
 const session = useSession()
 const view = ref<View>('networth')
 
 const NAV: { id: View; label: string }[] = [
   { id: 'networth', label: 'Net worth' },
+  { id: 'insights', label: 'Insights' },
   { id: 'summary', label: 'Monthly summary' },
   { id: 'budgets', label: 'Budgets' },
   { id: 'movements', label: 'Transactions' },
@@ -68,7 +70,8 @@ onMounted(() => session.connect('demo'))
       <template v-else-if="session.init">
         <PendingChanges />
         <PeriodHeader v-if="monthly(view)" />
-        <NetWorthView v-if="view === 'networth'" @configure="view = 'metadata'" />
+        <InsightsView v-if="view === 'insights'" />
+        <NetWorthView v-else-if="view === 'networth'" @configure="view = 'metadata'" />
         <SummaryView v-else-if="view === 'summary'" />
         <BudgetsView v-else-if="view === 'budgets'" />
         <MovementsTable v-else-if="view === 'movements'" />

@@ -178,6 +178,8 @@ export const useSession = defineStore('session', () => {
 
   /** Trend is fetched on demand and not part of the shared state. */
   const getAssetTrend = (assetId: string): Promise<MonthPoint[]> => client.getAssetTrend(assetId)
+  /** Movements over any span for reports, fetched on demand like the trend. */
+  const getHistory = (span: Period): Promise<Movement[]> => client.getMovements({ ...span, mbid: bookId.value })
 
   return {
     source,
@@ -198,6 +200,7 @@ export const useSession = defineStore('session', () => {
     setBook,
     refresh,
     getAssetTrend,
+    getHistory,
     backup,
     backupState,
     backupError,
