@@ -1,5 +1,7 @@
 mod backup;
 mod export;
+#[cfg(test)]
+mod live_phone;
 mod pcmanager;
 mod writes;
 
