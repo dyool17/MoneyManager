@@ -127,6 +127,10 @@ pub async fn take(
     };
     let manifest = serde_json::to_vec_pretty(&report).map_err(|e| e.to_string())?;
     write(&dir.join("manifest.json"), &manifest)?;
+    // A snapshot alone still counts: it records the state before any change.
+    if matches!(report.sqlite, SqliteOutcome::Saved { .. }) || !report.snapshot.is_empty() {
+        pc.record_backup(base_url);
+    }
     Ok(report)
 }
 

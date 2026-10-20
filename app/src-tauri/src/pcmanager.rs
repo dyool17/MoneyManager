@@ -1,10 +1,13 @@
 //! Read-only access to the MoneyManager PC Manager server.
 //!
-//! The only HTTP method this module can send is GET, and only to the
-//! endpoints listed in [`Endpoint`]. There is no generic request command.
+//! Reads are GET requests to the endpoints listed in [`Endpoint`]. Writes are
+//! POST requests built only from a validated [`crate::writes::WriteOp`].
+//! There is no generic request command.
 
+use std::collections::HashMap;
 use std::net::Ipv4Addr;
-use std::time::Duration;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use serde::Deserialize;
 use url::Url;
@@ -124,8 +127,12 @@ pub fn build_url(base: &str, endpoint: Endpoint, params: &ReadParams) -> Result<
     Ok(url)
 }
 
+/// Writes are refused unless a backup of the same phone was taken this recently.
+pub const BACKUP_MAX_AGE: Duration = Duration::from_secs(30 * 60);
+
 pub struct PcManager {
     http: reqwest::Client,
+    backups: Mutex<HashMap<String, Instant>>,
 }
 
 impl PcManager {
@@ -136,7 +143,49 @@ impl PcManager {
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .expect("HTTP client");
-        Self { http }
+        Self { http, backups: Mutex::new(HashMap::new()) }
+    }
+
+    pub fn record_backup(&self, base: &str) {
+        if let Ok(url) = validate_base_url(base) {
+            self.backups.lock().unwrap().insert(url.to_string(), Instant::now());
+        }
+    }
+
+    /// Ok when a backup of this phone was taken within `max_age`.
+    pub fn require_recent_backup(&self, base: &str, max_age: Duration) -> Result<(), String> {
+        let url = validate_base_url(base)?;
+        match self.backups.lock().unwrap().get(url.as_str()) {
+            Some(t) if t.elapsed() <= max_age => Ok(()),
+            _ => Err("Take a backup before changing data on the phone (Connect phone, then Back up now)".into()),
+        }
+    }
+
+    /// Sends one write. Never retried: a timed-out write may already be applied.
+    pub async fn write(&self, base: &str, req: &crate::writes::Request) -> Result<String, String> {
+        let mut url = validate_base_url(base)?;
+        url.set_path(&format!("/moneyBook/{}", req.path));
+        let res = self.http.post(url).form(&req.form).send().await.map_err(|e| {
+            if e.is_timeout() {
+                "The phone did not confirm the change in time. Refresh to check whether it was saved before trying again.".to_string()
+            } else if e.is_connect() {
+                "Cannot reach PC Manager. Nothing was changed.".to_string()
+            } else {
+                format!("Network error: {e}")
+            }
+        })?;
+        let status = res.status();
+        let body = res.text().await.unwrap_or_default();
+        if !status.is_success() {
+            return Err(format!("PC Manager answered HTTP {}", status.as_u16()));
+        }
+        if let Some(reason) = crate::writes::is_failure(&body) {
+            return Err(reason);
+        }
+        if let Some(reason) = crate::writes::is_unconfirmed(&body) {
+            return Err(reason);
+        }
+        Ok(body)
     }
 
     pub async fn read(&self, base: &str, endpoint: Endpoint, params: &ReadParams) -> Result<String, String> {
