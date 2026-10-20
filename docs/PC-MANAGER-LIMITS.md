@@ -27,6 +27,7 @@ El límite es el `startDate`: los inicios de los últimos dos días respecto de 
 
 ## Otros límites medidos
 
+- **PC Manager se apaga en cuanto bloqueas el móvil o cambias de aplicación.** Medido con una sonda continua: el servidor responde `RECHAZADO` (conexión rechazada, aunque el móvil hace ping) durante los segundos en que la pantalla está bloqueada, y vuelve a responder al desbloquear. La app de escritorio trata ese estado como «el móvil está apagado» y no pierde los cambios: quedan en el outbox local.
 - `GET /moneyBook/money.sqlite` responde `200` con **cero bytes**: la copia completa de la base no está disponible por HTTP. El respaldo automático guarda el snapshot legible y lo marca como tal.
 - `GET /moneyBook/getCardData` devuelve el total de deuda **en cero** aunque las tarjetas tengan importes pendientes. Hay que sumar el `notPayMoney` de cada tarjeta.
 - `GET /moneyBook/getAssetData` devuelve en los grupos el saldo ya convertido a la moneda principal y sin las cuentas excluidas, pero cada hijo conserva su saldo original sin convertir. Los totales por grupo no coinciden con la suma de sus hijos.

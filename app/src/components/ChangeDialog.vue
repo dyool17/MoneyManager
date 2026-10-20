@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useSession } from '../stores/session'
+import { useOutbox } from '../stores/outbox'
 import { formatDate, formatMoney } from '../domain/format'
 import { todayIso } from '../domain/period'
 import type { AssetItem, CardItem, Movement } from '../domain/types'
@@ -17,9 +18,11 @@ export type Draft =
 const props = defineProps<{ draft: Draft }>()
 const emit = defineEmits<{ close: [] }>()
 const session = useSession()
+const outbox = useOutbox()
 const dialog = ref<HTMLDialogElement | null>(null)
-const step = ref<'edit' | 'review' | 'sending' | 'done'>('edit')
+const step = ref<'edit' | 'review' | 'sending' | 'done' | 'queued'>('edit')
 const error = ref<string | null>(null)
+const queued = ref(false)
 
 onMounted(() => {
   dialog.value?.showModal()
@@ -218,6 +221,18 @@ async function confirm() {
     await session.write(pending.value)
     step.value = 'done'
   } catch (e) {
+    const kind = (e as { kind?: string })?.kind
+    if (kind === 'offline') {
+      // The request never left this computer, so it waits in the outbox.
+      outbox.recordFailure(pending.value, e, summary.value.join(' · '), session.address)
+      queued.value = true
+      step.value = 'queued'
+      return
+    }
+    if (kind === 'unconfirmed' || kind === 'timeout') {
+      // The phone may have applied it, so it is never sent again by itself.
+      outbox.recordFailure(pending.value, e, summary.value.join(' · '), session.address)
+    }
     error.value = e instanceof Error ? e.message : String(e)
     step.value = 'review'
     sent = false
@@ -330,6 +345,13 @@ function close() {
           {{ step === 'sending' ? 'Saving on phone…' : destructive ? 'Delete' : 'Save on phone' }}
         </button>
       </div>
+    </div>
+
+    <div v-else-if="step === 'queued'">
+      <p class="ok">Saved on this computer, not sent yet.</p>
+      <p>The phone was not reachable, so the change is waiting in <b>Pending changes</b>.
+        Open Money Manager on the phone again and use <b>Sync pending changes</b> to send it.</p>
+      <div class="actions"><button class="primary" @click="close">Close</button></div>
     </div>
 
     <div v-else>

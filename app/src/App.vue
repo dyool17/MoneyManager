@@ -11,6 +11,7 @@ import AccountsView from './components/AccountsView.vue'
 import CardsView from './components/CardsView.vue'
 import BudgetsView from './components/BudgetsView.vue'
 import AccountMetadataView from './components/AccountMetadataView.vue'
+import PendingChanges from './components/PendingChanges.vue'
 
 type View = 'networth' | 'summary' | 'budgets' | 'movements' | 'accounts' | 'cards' | 'connection' | 'metadata'
 const session = useSession()
@@ -65,6 +66,7 @@ onMounted(() => session.connect('demo'))
       <StatusBanner />
       <ConnectionPanel v-if="view === 'connection'" @connected="view = 'networth'" />
       <template v-else-if="session.init">
+        <PendingChanges />
         <PeriodHeader v-if="monthly(view)" />
         <NetWorthView v-if="view === 'networth'" @configure="view = 'metadata'" />
         <SummaryView v-else-if="view === 'summary'" />
