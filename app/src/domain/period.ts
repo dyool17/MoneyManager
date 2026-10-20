@@ -48,3 +48,18 @@ export function mergeMovements(chunks: Movement[][]): Movement[] {
 export function todayIso(now = new Date()): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
+
+/**
+ * The phone's PC Manager never answers when a period starts within two days of
+ * today, so such a query is widened. The extra days are filtered out again by
+ * the caller, so the result is identical to the requested period.
+ */
+export function safeQueryStart(startDate: string, today: string): string {
+  const start = Date.parse(`${startDate}T00:00:00Z`)
+  const now = Date.parse(`${today}T00:00:00Z`)
+  if (!Number.isFinite(start) || !Number.isFinite(now)) return startDate
+  const days = Math.round((now - start) / 86_400_000)
+  if (days < 0 || days > 2) return startDate
+  const earlier = new Date(now - 3 * 86_400_000)
+  return `${earlier.getUTCFullYear()}-${pad(earlier.getUTCMonth() + 1)}-${pad(earlier.getUTCDate())}`
+}

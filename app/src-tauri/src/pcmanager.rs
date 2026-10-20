@@ -1,10 +1,13 @@
 //! Read-only access to the MoneyManager PC Manager server.
 //!
-//! The only HTTP method this module can send is GET, and only to the
-//! endpoints listed in [`Endpoint`]. There is no generic request command.
+//! Reads are GET requests to the endpoints listed in [`Endpoint`]. Writes are
+//! POST requests built only from a validated [`crate::writes::WriteOp`].
+//! There is no generic request command.
 
+use std::collections::HashMap;
 use std::net::Ipv4Addr;
-use std::time::Duration;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use serde::Deserialize;
 use url::Url;
@@ -17,6 +20,18 @@ pub enum Endpoint {
     SummaryByPeriod,
     #[serde(rename = "getDataByPeriod")]
     MovementsByPeriod,
+    #[serde(rename = "getDashBoardData")]
+    Dashboard,
+    #[serde(rename = "getAssetData")]
+    Assets,
+    #[serde(rename = "getCardData")]
+    Cards,
+    #[serde(rename = "getEachAssetChartData")]
+    AssetTrend,
+    /// Full app backup. Binary, so it is only reachable through the backup
+    /// command, never from `mm_read`.
+    #[serde(skip)]
+    SqliteBackup,
 }
 
 impl Endpoint {
@@ -25,6 +40,11 @@ impl Endpoint {
             Endpoint::InitData => "getInitData",
             Endpoint::SummaryByPeriod => "getSummaryDataByPeriod",
             Endpoint::MovementsByPeriod => "getDataByPeriod",
+            Endpoint::Dashboard => "getDashBoardData",
+            Endpoint::Assets => "getAssetData",
+            Endpoint::Cards => "getCardData",
+            Endpoint::AssetTrend => "getEachAssetChartData",
+            Endpoint::SqliteBackup => "money.sqlite",
         }
     }
 }
@@ -80,7 +100,7 @@ pub fn build_url(base: &str, endpoint: Endpoint, params: &ReadParams) -> Result<
     let mut url = validate_base_url(base)?;
     url.set_path(&format!("/moneyBook/{}", endpoint.path()));
 
-    let needs_period = endpoint != Endpoint::InitData;
+    let needs_period = matches!(endpoint, Endpoint::SummaryByPeriod | Endpoint::MovementsByPeriod);
     let mut query: Vec<(&str, &str)> = Vec::new();
     if needs_period {
         for (key, value) in [("startDate", &params.start_date), ("endDate", &params.end_date)] {
@@ -97,14 +117,22 @@ pub fn build_url(base: &str, endpoint: Endpoint, params: &ReadParams) -> Result<
         }
         query.push(("assetId", asset));
     }
+    if endpoint == Endpoint::AssetTrend {
+        let asset = params.asset_id.as_deref().filter(|v| !v.is_empty() && is_id(v)).ok_or("Invalid assetId")?;
+        query.push(("assetId", asset));
+    }
     if !query.is_empty() {
         url.query_pairs_mut().extend_pairs(query);
     }
     Ok(url)
 }
 
+/// Writes are refused unless a backup of the same phone was taken this recently.
+pub const BACKUP_MAX_AGE: Duration = Duration::from_secs(30 * 60);
+
 pub struct PcManager {
     http: reqwest::Client,
+    backups: Mutex<HashMap<String, Instant>>,
 }
 
 impl PcManager {
@@ -115,12 +143,76 @@ impl PcManager {
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .expect("HTTP client");
-        Self { http }
+        Self { http, backups: Mutex::new(HashMap::new()) }
+    }
+
+    pub fn record_backup(&self, base: &str) {
+        if let Ok(url) = validate_base_url(base) {
+            self.backups.lock().unwrap().insert(url.to_string(), Instant::now());
+        }
+    }
+
+    /// Ok when a backup of this phone was taken within `max_age`.
+    pub fn require_recent_backup(&self, base: &str, max_age: Duration) -> Result<(), String> {
+        let url = validate_base_url(base)?;
+        match self.backups.lock().unwrap().get(url.as_str()) {
+            Some(t) if t.elapsed() <= max_age => Ok(()),
+            _ => Err("Take a backup before changing data on the phone (Connect phone, then Back up now)".into()),
+        }
+    }
+
+    /// Sends one write. Never retried: a timed-out write may already be applied.
+    pub async fn write(&self, base: &str, req: &crate::writes::Request) -> Result<String, String> {
+        let mut url = validate_base_url(base)?;
+        url.set_path(&format!("/moneyBook/{}", req.path));
+        let res = self.http.post(url).form(&req.form).send().await.map_err(|e| {
+            if e.is_timeout() {
+                "The phone did not confirm the change in time. Refresh to check whether it was saved before trying again.".to_string()
+            } else if e.is_connect() {
+                "Cannot reach PC Manager. Nothing was changed.".to_string()
+            } else {
+                format!("Network error: {e}")
+            }
+        })?;
+        let status = res.status();
+        let body = res.text().await.unwrap_or_default();
+        if !status.is_success() {
+            return Err(format!("PC Manager answered HTTP {}", status.as_u16()));
+        }
+        if let Some(reason) = crate::writes::is_failure(&body) {
+            return Err(reason);
+        }
+        if let Some(reason) = crate::writes::is_unconfirmed(&body) {
+            return Err(reason);
+        }
+        Ok(body)
     }
 
     pub async fn read(&self, base: &str, endpoint: Endpoint, params: &ReadParams) -> Result<String, String> {
+        let res = self.get(base, endpoint, params, None).await?;
+        res.text().await.map_err(|e| format!("Could not read response: {e}"))
+    }
+
+    /// Downloads a binary read endpoint. Larger timeout: backups can be big.
+    pub async fn read_bytes(&self, base: &str, endpoint: Endpoint) -> Result<Vec<u8>, String> {
+        let res = self.get(base, endpoint, &ReadParams::default(), Some(Duration::from_secs(180))).await?;
+        let bytes = res.bytes().await.map_err(|e| format!("Could not read response: {e}"))?;
+        Ok(bytes.to_vec())
+    }
+
+    async fn get(
+        &self,
+        base: &str,
+        endpoint: Endpoint,
+        params: &ReadParams,
+        timeout: Option<Duration>,
+    ) -> Result<reqwest::Response, String> {
         let url = build_url(base, endpoint, params)?;
-        let res = self.http.get(url).send().await.map_err(|e| {
+        let mut req = self.http.get(url);
+        if let Some(t) = timeout {
+            req = req.timeout(t);
+        }
+        let res = req.send().await.map_err(|e| {
             if e.is_timeout() {
                 "PC Manager did not answer in time".to_string()
             } else if e.is_connect() {
@@ -133,7 +225,7 @@ impl PcManager {
         if !status.is_success() {
             return Err(format!("PC Manager answered HTTP {}", status.as_u16()));
         }
-        res.text().await.map_err(|e| format!("Could not read response: {e}"))
+        Ok(res)
     }
 }
 
@@ -177,9 +269,30 @@ mod tests {
     }
 
     #[test]
+    fn builds_phase2_read_paths() {
+        let base = "http://192.168.1.2:8080";
+        let none = ReadParams::default();
+        for (e, path) in [
+            (Endpoint::Dashboard, "getDashBoardData"),
+            (Endpoint::Assets, "getAssetData"),
+            (Endpoint::Cards, "getCardData"),
+        ] {
+            assert_eq!(build_url(base, e, &none).unwrap().as_str(), format!("{base}/moneyBook/{path}"));
+        }
+        let trend = ReadParams { asset_id: Some("cash".into()), ..ReadParams::default() };
+        assert_eq!(
+            build_url(base, Endpoint::AssetTrend, &trend).unwrap().as_str(),
+            format!("{base}/moneyBook/getEachAssetChartData?assetId=cash")
+        );
+        assert!(build_url(base, Endpoint::AssetTrend, &none).is_err());
+    }
+
+    #[test]
     fn rejects_unknown_endpoints_and_fields() {
         assert!(serde_json::from_str::<Endpoint>("\"create\"").is_err());
         assert!(serde_json::from_str::<Endpoint>("\"uploadSqlFile\"").is_err());
+        assert!(serde_json::from_str::<Endpoint>("\"money.sqlite\"").is_err());
+        assert!(serde_json::from_str::<Endpoint>("\"SqliteBackup\"").is_err());
         assert!(serde_json::from_str::<ReadParams>(r#"{"method":"POST"}"#).is_err());
     }
 

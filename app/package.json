@@ -15,10 +15,13 @@
     "fast-xml-parser": "^5.11.2",
     "json5": "^2.2.3",
     "pinia": "^4.1.0",
+    "sql.js": "^1.15.1",
     "vue": "^3.5.13"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
+    "@types/node": "^26.6.5",
+    "@types/sql.js": "^1.4.11",
     "@vitejs/plugin-vue": "^6.0.7",
     "typescript": "~6.0.3",
     "vite": "^8.0.16",

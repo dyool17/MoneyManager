@@ -1,7 +1,25 @@
 import { defineStore } from 'pinia'
 import { ref, shallowRef } from 'vue'
-import type { InitData, MoneyManagerClient, Movement, Period, Summary } from '../domain/types'
-import { FixtureTransport, PcManagerClient, TauriTransport } from '../infrastructure/client'
+import type {
+  AssetGroup,
+  CardGroup,
+  Dashboard,
+  InitData,
+  MoneyManagerClient,
+  MonthPoint,
+  Movement,
+  Period,
+  Summary,
+} from '../domain/types'
+import {
+  FixtureTransport,
+  PcManagerClient,
+  TauriTransport,
+  takeBackup,
+  applyWrite,
+  type BackupReport,
+  type WriteOp,
+} from '../infrastructure/client'
 
 export type Status = 'idle' | 'loading' | 'ready' | 'offline' | 'invalid-response'
 export type Source = 'demo' | 'phone'
@@ -26,21 +44,67 @@ export const useSession = defineStore('session', () => {
   const summary = shallowRef<Summary | null>(null)
   const movements = shallowRef<Movement[]>([])
   const loadedAt = ref<Date | null>(null)
+  const dashboard = shallowRef<Dashboard | null>(null)
+  const assets = shallowRef<AssetGroup[]>([])
+  const cards = shallowRef<CardGroup[]>([])
+  /** Book used for period queries. Net worth, accounts and cards are not per book on the server. */
+  const bookId = ref('')
+  const backup = shallowRef<BackupReport | null>(null)
+  const backupState = ref<'idle' | 'running' | 'done' | 'failed'>('idle')
+  const backupError = ref<string | null>(null)
   let client: MoneyManagerClient = new PcManagerClient(new FixtureTransport())
 
-  /** Runs a load; on failure keeps the previous data and records the error. */
-  async function run(task: () => Promise<void>) {
+  let latest = 0
+
+  /**
+   * Runs a load; on failure keeps the previous data and records the error.
+   * `task` returns a commit callback so only the most recent load writes state.
+   */
+  async function run(task: () => Promise<() => void>) {
+    const ticket = ++latest
     status.value = 'loading'
     error.value = null
     try {
-      await task()
+      const commit = await task()
+      if (ticket !== latest) return
+      commit()
       status.value = 'ready'
       loadedAt.value = new Date()
     } catch (e) {
+      if (ticket !== latest) return
       const isParse = e instanceof Error && e.name === 'InvalidResponseError'
       status.value = isParse ? 'invalid-response' : 'offline'
       error.value = e instanceof Error ? e.message : String(e)
     }
+  }
+
+  /** Saves a local backup of the connected phone. Demo data is never backed up. */
+  async function backupNow() {
+    if (source.value !== 'phone' || !init.value || backupState.value === 'running') return
+    backupState.value = 'running'
+    backupError.value = null
+    try {
+      backup.value = await takeBackup(address.value, { ...period.value, mbid: bookId.value })
+      backupState.value = 'done'
+    } catch (e) {
+      backupError.value = e instanceof Error ? e.message : String(e)
+      backupState.value = 'failed'
+    }
+  }
+
+  /** Backups older than this no longer allow changes (matches the Rust check). */
+  const BACKUP_MAX_AGE_MS = 30 * 60 * 1000
+  const canWrite = () =>
+    source.value === 'phone' &&
+    backupState.value === 'done' &&
+    !!backup.value &&
+    Date.now() - new Date(backup.value.createdAt).getTime() < BACKUP_MAX_AGE_MS
+
+  /** Applies one change on the phone, then reloads. Throws so the dialog can show the error. */
+  async function write(op: WriteOp) {
+    if (source.value !== 'phone') throw new Error('Connect your phone to make changes. Demo data cannot be changed.')
+    await applyWrite(address.value, op)
+    await refresh()
   }
 
   async function connect(next: Source, nextAddress = address.value) {
@@ -53,36 +117,92 @@ export const useSession = defineStore('session', () => {
       const query = { ...data.defaultPeriod, mbid: data.currentBook.id }
       const s = await candidate.getSummary(query)
       const m = await candidate.getMovements(query)
+      const o = await readOverview(candidate)
       // Commit only after every read succeeded, so a failure keeps the previous state.
-      client = candidate
-      source.value = next
-      init.value = data
-      period.value = { ...data.defaultPeriod }
-      summary.value = s
-      movements.value = m
-      if (next === 'phone') {
-        address.value = nextAddress.trim()
-        try {
-          localStorage.setItem(ADDRESS_KEY, address.value)
-        } catch {
-          /* storage unavailable: address is just not remembered */
+      return () => {
+        client = candidate
+        source.value = next
+        init.value = data
+        bookId.value = data.currentBook.id
+        period.value = { ...data.defaultPeriod }
+        summary.value = s
+        movements.value = m
+        o()
+        if (next === 'phone') {
+          address.value = nextAddress.trim()
+          try {
+            localStorage.setItem(ADDRESS_KEY, address.value)
+          } catch {
+            /* storage unavailable: address is just not remembered */
+          }
         }
       }
     })
+    if (next === 'phone' && status.value === 'ready' && source.value === 'phone') await backupNow()
   }
 
-  async function loadPeriod(target: Period) {
-    if (!init.value) return
-    const query = { ...target, mbid: init.value.currentBook.id }
+  async function readOverview(from: MoneyManagerClient) {
+    const d = await from.getDashboard()
+    const a = await from.getAssets()
+    const c = await from.getCards()
+    return () => {
+      dashboard.value = d
+      assets.value = a
+      cards.value = c
+    }
+  }
+
+  async function loadPeriod(target: Period, mbid = bookId.value) {
+    const query = { ...target, mbid }
     const s = await client.getSummary(query)
     const m = await client.getMovements(query)
-    period.value = { ...target }
-    summary.value = s
-    movements.value = m
+    return () => {
+      bookId.value = mbid
+      period.value = { ...target }
+      summary.value = s
+      movements.value = m
+    }
   }
 
   const setPeriod = (next: Period) => run(() => loadPeriod(next))
-  const refresh = () => run(() => loadPeriod(period.value))
+  const setBook = (id: string) => run(() => loadPeriod(period.value, id))
+  const refresh = () =>
+    run(async () => {
+      const p = await loadPeriod(period.value)
+      const o = await readOverview(client)
+      return () => {
+        p()
+        o()
+      }
+    })
 
-  return { source, address, status, error, init, period, summary, movements, loadedAt, connect, setPeriod, refresh }
+  /** Trend is fetched on demand and not part of the shared state. */
+  const getAssetTrend = (assetId: string): Promise<MonthPoint[]> => client.getAssetTrend(assetId)
+
+  return {
+    source,
+    address,
+    status,
+    error,
+    init,
+    period,
+    summary,
+    movements,
+    loadedAt,
+    dashboard,
+    assets,
+    cards,
+    connect,
+    bookId,
+    setPeriod,
+    setBook,
+    refresh,
+    getAssetTrend,
+    backup,
+    backupState,
+    backupError,
+    backupNow,
+    canWrite,
+    write,
+  }
 })

@@ -3,6 +3,13 @@ import { computed, ref } from 'vue'
 import { useSession } from '../stores/session'
 import { formatDate, formatMoney } from '../domain/format'
 import type { Movement, MovementType } from '../domain/types'
+import { movementsCsv } from '../domain/export'
+import { exportCsv } from '../infrastructure/client'
+import ChangeDialog, { type Draft } from './ChangeDialog.vue'
+
+const draft = ref<Draft | null>(null)
+const editRow = (m: Movement) =>
+  (draft.value = m.type === 'transfer-in' || m.type === 'transfer-out' ? { kind: 'transfer', initial: m } : { kind: 'transaction', initial: m })
 
 const session = useSession()
 const text = ref('')
@@ -37,6 +44,17 @@ const filtered = computed(() => {
 const recorded = computed(() => filtered.value.filter((m) => !m.isFuture))
 const upcoming = computed(() => filtered.value.filter((m) => m.isFuture))
 
+const exportState = ref<{ kind: 'idle' | 'saving' | 'saved' | 'failed'; text?: string }>({ kind: 'idle' })
+async function exportFiltered() {
+  exportState.value = { kind: 'saving' }
+  try {
+    const path = await exportCsv(session.period, movementsCsv(filtered.value))
+    exportState.value = { kind: 'saved', text: path }
+  } catch (e) {
+    exportState.value = { kind: 'failed', text: e instanceof Error ? e.message : String(e) }
+  }
+}
+
 const accountName = (id?: string) => session.init?.accounts.find((a) => a.id === id)?.name ?? id
 const typeLabel = (m: Movement) => (m.type === 'unknown' ? `Other (code ${m.rawCode})` : TYPE_LABEL[m.type])
 </script>
@@ -58,7 +76,12 @@ const typeLabel = (m: Movement) => (m.type === 'unknown' ? `Other (code ${m.rawC
         <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
       </select>
       <span class="count">{{ filtered.length }} of {{ session.movements.length }}</span>
+      <button :disabled="!filtered.length || exportState.kind === 'saving'" @click="exportFiltered">Export CSV</button>
+      <button v-if="session.source === 'phone'" class="primary" @click="draft = { kind: 'transaction' }">Add transaction</button>
+      <button v-if="session.source === 'phone'" @click="draft = { kind: 'transfer' }">Add transfer</button>
     </div>
+    <p v-if="exportState.kind === 'saved'" class="export ok" role="status">Saved {{ filtered.length }} transactions to <code>{{ exportState.text }}</code></p>
+    <p v-else-if="exportState.kind === 'failed'" class="export warn" role="alert">Export failed: {{ exportState.text }}</p>
 
     <p v-if="!session.movements.length" class="empty">No transactions this month. Try another month.</p>
     <p v-else-if="!filtered.length" class="empty">No transactions match these filters.</p>
@@ -72,7 +95,7 @@ const typeLabel = (m: Movement) => (m.type === 'unknown' ? `Other (code ${m.rawC
         <table>
           <thead>
             <tr>
-              <th>Date</th><th>Note</th><th>Category</th><th>Account</th><th>Type</th><th class="num">Amount</th>
+              <th>Date</th><th>Note</th><th>Category</th><th>Account</th><th>Type</th><th class="num">Amount</th><th><span class="sr">Actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -89,17 +112,32 @@ const typeLabel = (m: Movement) => (m.type === 'unknown' ? `Other (code ${m.rawC
               </td>
               <td :class="m.type">{{ typeLabel(m) }}</td>
               <td :class="['num', 'amount', m.type]">{{ formatMoney(m.amount) }}</td>
+              <td class="row-actions">
+                <template v-if="session.source === 'phone'">
+                  <button v-if="m.type !== 'unknown'" class="link" :aria-label="`Edit ${m.content ?? 'transaction'}`" @click="editRow(m)">Edit</button>
+                  <button class="link danger-link" :aria-label="`Delete ${m.content ?? 'transaction'}`" @click="draft = { kind: 'delete-transactions', rows: [m] }">Delete</button>
+                </template>
+              </td>
             </tr>
           </tbody>
         </table>
       </template>
     </template>
+    <ChangeDialog v-if="draft" :draft="draft" @close="draft = null" />
   </section>
 </template>
 
 <style scoped>
+.row-actions { white-space: nowrap; text-align: right; }
+.link { border: none; background: none; padding: 0 0.35rem; color: var(--accent); }
+.danger-link { color: var(--expense); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .filters { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1.25rem; }
 .filters input { flex: 1 1 14rem; }
+.export { margin: -0.5rem 0 1rem; font-size: 0.9rem; }
+.export code { word-break: break-all; }
+.ok { color: var(--income); }
+.warn { color: var(--warn-ink); }
 .count { margin-left: auto; color: var(--ink-soft); font-size: 0.85rem; }
 h2 { font-size: 1.05rem; margin: 1.5rem 0 0.5rem; }
 h2 small { font-weight: 400; color: var(--ink-soft); margin-left: 0.4rem; }

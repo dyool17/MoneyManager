@@ -61,7 +61,7 @@ Los componentes Vue sólo deben depender de esta interfaz. Así, el modo offline
 
 - No generar clientes desde las operaciones `POST` de la OpenAPI.
 - No probar constraints server-side contra el libro real.
-- No descargar ni restaurar `money.sqlite`.
+- No restaurar `money.sqlite` desde la app; la descarga se usa sólo como respaldo local al conectar (ver `odd/tasks/phase1-read-only.md`, L8).
 - No implementar formularios de escritura en Vue.
 - No usar el DOM o los estilos de ExtJS como dependencia.
 
