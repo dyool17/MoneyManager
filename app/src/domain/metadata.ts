@@ -44,13 +44,13 @@ export function validateState(v: unknown): MetadataState {
 }
 
 export function resolveMetadata(state: MetadataState, id: string): AccountSettings | undefined {
-  if (Object.hasOwn(state.overrides, id)) return state.overrides[id]
-  if (state.imported && Object.hasOwn(state.imported.accounts, id)) return state.imported.accounts[id]
+  if (Object.prototype.hasOwnProperty.call(state.overrides, id)) return state.overrides[id]
+  if (state.imported && Object.prototype.hasOwnProperty.call(state.imported.accounts, id)) return state.imported.accounts[id]
   return undefined
 }
 
 export function importMetadata(state: MetadataState, snapshot: MetadataSnapshot, liveIds: string[]): MetadataState {
-  if (!liveIds.some(id => Object.hasOwn(snapshot.accounts, id))) throw new Error('This backup does not match any loaded accounts.')
+  if (!liveIds.some(id => Object.prototype.hasOwnProperty.call(snapshot.accounts, id))) throw new Error('This backup does not match any loaded accounts.')
   if (state.baseCurrency && state.baseCurrency !== snapshot.baseCurrency) throw new Error('Backup base currency differs. Keep the same base currency for this phone.')
   return validateState({ ...state, baseCurrency: snapshot.baseCurrency, imported: snapshot })
 }

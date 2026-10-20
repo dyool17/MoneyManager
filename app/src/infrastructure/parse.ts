@@ -81,6 +81,10 @@ export function parseInitData(text: string): InitData {
       id: String(a.assetId),
       name: String(a.assetName),
     })),
+    accountGroups: asArray(root.assetGroups ?? [], source, 'assetGroups').map((g) => ({
+      id: String(g.assetGroupId),
+      name: String(g.assetName),
+    })),
   }
 }
 

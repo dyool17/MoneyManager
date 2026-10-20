@@ -1,6 +1,6 @@
 # Instalación de Money Manager Desktop (beta)
 
-Versión actual: `0.1.0-beta.2`. Sólo lectura: la app no modifica datos del teléfono.
+Versión actual: `0.1.0-beta.2`. La app puede modificar datos del teléfono sólo cuando tú lo confirmas, y exige un respaldo reciente.
 
 ## Linux (instalación por usuario, sin sudo)
 
@@ -60,6 +60,20 @@ Pendiente (fase 4). Se generará un instalador `.msi` con `pnpm tauri build` en 
 Sin teléfono, la app abre con datos demo.
 
 Para configurar qué cuentas suman al patrimonio y sus monedas, abre **Account metadata**. Puedes importar metadata de un respaldo nativo o guardar ajustes manuales; ninguna de esas acciones modifica el teléfono. Consulta [Totales con metadata de cuentas](ACCOUNT-METADATA.md).
+
+## Modificar datos del teléfono
+
+La app puede crear, editar y eliminar movimientos, transferencias, cuentas y tarjetas. Antes de aplicar cada cambio te muestra un resumen y pide confirmación; las eliminaciones exigen escribir `delete`.
+
+Reglas de seguridad:
+
+- Necesitas un respaldo de los últimos 30 minutos. Al conectar el teléfono se guarda uno automático; también puedes forzarlo con **Back up now**.
+- Cada intento queda registrado en `~/.local/share/com.dyool.moneymanager/writes.log` (fecha, teléfono, operación, resultado y error). No se guardan respuestas completas del teléfono.
+- Un cambio se envía una sola vez, nunca se reintenta: si el teléfono no responde a tiempo, la app no reintenta para no duplicar el movimiento.
+- Si la respuesta del teléfono no es una confirmación reconocible, la app informa que el cambio **no está confirmado** y te pide revisar el teléfono antes de reintentar.
+- En modo demo no se puede escribir nada.
+
+Ejemplos de cambios que la app todavía no cubre: restaurar un respaldo sobre el teléfono, cambiar categorías o presupuestos, y exportar a Excel.
 
 ## Problemas frecuentes
 

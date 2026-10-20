@@ -16,7 +16,9 @@ import {
   PcManagerClient,
   TauriTransport,
   takeBackup,
+  applyWrite,
   type BackupReport,
+  type WriteOp,
 } from '../infrastructure/client'
 
 export type Status = 'idle' | 'loading' | 'ready' | 'offline' | 'invalid-response'
@@ -88,6 +90,21 @@ export const useSession = defineStore('session', () => {
       backupError.value = e instanceof Error ? e.message : String(e)
       backupState.value = 'failed'
     }
+  }
+
+  /** Backups older than this no longer allow changes (matches the Rust check). */
+  const BACKUP_MAX_AGE_MS = 30 * 60 * 1000
+  const canWrite = () =>
+    source.value === 'phone' &&
+    backupState.value === 'done' &&
+    !!backup.value &&
+    Date.now() - new Date(backup.value.createdAt).getTime() < BACKUP_MAX_AGE_MS
+
+  /** Applies one change on the phone, then reloads. Throws so the dialog can show the error. */
+  async function write(op: WriteOp) {
+    if (source.value !== 'phone') throw new Error('Connect your phone to make changes. Demo data cannot be changed.')
+    await applyWrite(address.value, op)
+    await refresh()
   }
 
   async function connect(next: Source, nextAddress = address.value) {
@@ -185,5 +202,7 @@ export const useSession = defineStore('session', () => {
     backupState,
     backupError,
     backupNow,
+    canWrite,
+    write,
   }
 })

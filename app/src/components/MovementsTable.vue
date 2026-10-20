@@ -5,6 +5,11 @@ import { formatDate, formatMoney } from '../domain/format'
 import type { Movement, MovementType } from '../domain/types'
 import { movementsCsv } from '../domain/export'
 import { exportCsv } from '../infrastructure/client'
+import ChangeDialog, { type Draft } from './ChangeDialog.vue'
+
+const draft = ref<Draft | null>(null)
+const editRow = (m: Movement) =>
+  (draft.value = m.type === 'transfer-in' || m.type === 'transfer-out' ? { kind: 'transfer', initial: m } : { kind: 'transaction', initial: m })
 
 const session = useSession()
 const text = ref('')
@@ -72,6 +77,8 @@ const typeLabel = (m: Movement) => (m.type === 'unknown' ? `Other (code ${m.rawC
       </select>
       <span class="count">{{ filtered.length }} of {{ session.movements.length }}</span>
       <button :disabled="!filtered.length || exportState.kind === 'saving'" @click="exportFiltered">Export CSV</button>
+      <button class="primary" @click="draft = { kind: 'transaction' }">Add transaction</button>
+      <button @click="draft = { kind: 'transfer' }">Add transfer</button>
     </div>
     <p v-if="exportState.kind === 'saved'" class="export ok" role="status">Saved {{ filtered.length }} transactions to <code>{{ exportState.text }}</code></p>
     <p v-else-if="exportState.kind === 'failed'" class="export warn" role="alert">Export failed: {{ exportState.text }}</p>
@@ -88,7 +95,7 @@ const typeLabel = (m: Movement) => (m.type === 'unknown' ? `Other (code ${m.rawC
         <table>
           <thead>
             <tr>
-              <th>Date</th><th>Note</th><th>Category</th><th>Account</th><th>Type</th><th class="num">Amount</th>
+              <th>Date</th><th>Note</th><th>Category</th><th>Account</th><th>Type</th><th class="num">Amount</th><th><span class="sr">Actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -105,15 +112,24 @@ const typeLabel = (m: Movement) => (m.type === 'unknown' ? `Other (code ${m.rawC
               </td>
               <td :class="m.type">{{ typeLabel(m) }}</td>
               <td :class="['num', 'amount', m.type]">{{ formatMoney(m.amount) }}</td>
+              <td class="row-actions">
+                <button v-if="m.type !== 'unknown'" class="link" :aria-label="`Edit ${m.content ?? 'transaction'}`" @click="editRow(m)">Edit</button>
+                <button class="link danger-link" :aria-label="`Delete ${m.content ?? 'transaction'}`" @click="draft = { kind: 'delete-transactions', rows: [m] }">Delete</button>
+              </td>
             </tr>
           </tbody>
         </table>
       </template>
     </template>
+    <ChangeDialog v-if="draft" :draft="draft" @close="draft = null" />
   </section>
 </template>
 
 <style scoped>
+.row-actions { white-space: nowrap; text-align: right; }
+.link { border: none; background: none; padding: 0 0.35rem; color: var(--accent); }
+.danger-link { color: var(--expense); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .filters { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1.25rem; }
 .filters input { flex: 1 1 14rem; }
 .export { margin: -0.5rem 0 1rem; font-size: 0.9rem; }

@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { useSession } from '../stores/session'
+import { ref } from 'vue'
 import { formatMoney } from '../domain/format'
+import ChangeDialog, { type Draft } from './ChangeDialog.vue'
+
+const draft = ref<Draft | null>(null)
 
 const session = useSession()
 const accountName = (id?: string) =>
@@ -9,7 +13,10 @@ const accountName = (id?: string) =>
 
 <template>
   <section>
-    <p v-if="!session.cards.length" class="muted">No credit cards in this book.</p>
+    <div class="bar">
+      <p v-if="!session.cards.length" class="muted">No credit cards in this book.</p>
+      <button class="primary" @click="draft = { kind: 'card' }">Add card</button>
+    </div>
     <div v-for="g in session.cards" :key="g.id" class="group">
       <h2>{{ g.name }}</h2>
       <div class="grid">
@@ -27,13 +34,22 @@ const accountName = (id?: string) =>
             <div v-if="c.closingDay"><dt>Statement closes</dt><dd>Day {{ c.closingDay }}</dd></div>
             <div v-if="c.paymentDay"><dt>Payment due</dt><dd>Day {{ c.paymentDay }}</dd></div>
           </dl>
+          <div class="acts">
+            <button @click="draft = { kind: 'card', initial: c }">Edit</button>
+            <button class="danger-btn" @click="draft = { kind: 'delete-asset', id: c.id, name: c.name, isCard: true }">Delete</button>
+          </div>
         </article>
       </div>
     </div>
+    <ChangeDialog v-if="draft" :draft="draft" @close="draft = null" />
   </section>
 </template>
 
 <style scoped>
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.bar button { margin-left: auto; }
+.acts { display: flex; gap: 0.5rem; margin-top: 1rem; }
+.danger-btn { color: var(--expense); }
 .muted { color: var(--ink-soft); }
 .group + .group { margin-top: 2rem; }
 h2 { font-size: 1.05rem; margin: 0 0 0.75rem; }

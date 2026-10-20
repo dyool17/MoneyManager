@@ -52,6 +52,7 @@ export interface InitData {
   incomeCategories: Category[]
   expenseCategories: Category[]
   accounts: Account[]
+  accountGroups: Account[]
 }
 
 export interface Period {

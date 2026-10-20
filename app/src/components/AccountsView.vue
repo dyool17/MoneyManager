@@ -4,6 +4,9 @@ import { useSession } from '../stores/session'
 import { formatDate, formatMoney } from '../domain/format'
 import type { MonthPoint } from '../domain/types'
 import LineChart from './LineChart.vue'
+import ChangeDialog, { type Draft } from './ChangeDialog.vue'
+
+const draft = ref<Draft | null>(null)
 
 const session = useSession()
 const selected = ref<string | null>(session.assets[0]?.items[0]?.id ?? null)
@@ -59,12 +62,17 @@ watch(
         </button>
       </div>
       <p v-if="!session.assets.length" class="muted">No accounts found.</p>
+      <button class="add" @click="draft = { kind: 'asset' }">Add account</button>
     </nav>
 
     <div v-if="selectedItem" class="detail">
       <header>
         <h2>{{ selectedItem.name }}</h2>
         <strong class="amount">{{ formatMoney(selectedItem.balance) }}</strong>
+        <div class="acts">
+          <button @click="draft = { kind: 'asset', initial: selectedItem, groupId: session.assets.find((g) => g.items.some((i) => i.id === selectedItem!.id))?.id }">Edit</button>
+          <button class="danger-btn" @click="draft = { kind: 'delete-asset', id: selectedItem.id, name: selectedItem.name, isCard: false }">Delete</button>
+        </div>
       </header>
 
       <div class="card">
@@ -92,6 +100,7 @@ watch(
         </table>
       </div>
     </div>
+    <ChangeDialog v-if="draft" :draft="draft" @close="draft = null" />
   </section>
 </template>
 
@@ -106,7 +115,11 @@ watch(
 .name { flex: 1; }
 .dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; flex: none; }
 .detail { display: grid; gap: 1.25rem; }
-.detail header { display: flex; align-items: baseline; justify-content: space-between; }
+.detail header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.75rem 1.25rem; }
+.detail header strong { margin-left: auto; }
+.acts { display: flex; gap: 0.5rem; }
+.danger-btn { color: var(--expense); }
+.add { width: 100%; margin-top: 0.5rem; }
 h2 { font-size: 1.6rem; margin: 0; letter-spacing: -0.01em; }
 .detail header strong { font-size: 1.6rem; }
 .card { background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; padding: 1.25rem 1.5rem; }

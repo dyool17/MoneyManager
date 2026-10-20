@@ -143,3 +143,63 @@ export function takeBackup(baseUrl: string, period: ReadParams): Promise<BackupR
 export function exportCsv(period: Period, content: string): Promise<string> {
   return invoke<string>('mm_export_csv', { startDate: period.startDate, endDate: period.endDate, content })
 }
+
+export interface TransactionFields {
+  date: string
+  assetId: string
+  payType: string
+  categoryId: string
+  categoryName: string
+  subcategoryId?: string
+  subcategoryName?: string
+  amount: number
+  kind: 'income' | 'expense'
+  note?: string
+  detail?: string
+}
+
+export interface TransferFields {
+  date: string
+  fromAssetId: string
+  fromAssetName: string
+  toAssetId: string
+  toAssetName: string
+  amount: number
+  note?: string
+  detail?: string
+}
+
+export interface AssetFields {
+  groupId: string
+  groupName: string
+  name: string
+  balance: number
+  linkAssetId?: string
+  linkAssetName?: string
+}
+
+export interface CardFields {
+  name: string
+  linkAssetId: string
+  linkAssetName: string
+  closingDay: number
+  paymentDay: number
+}
+
+/** Mirrors the Rust `WriteOp` enum. */
+export type WriteOp =
+  | { op: 'create-transaction'; fields: TransactionFields }
+  | { op: 'update-transaction'; id: string; fields: TransactionFields }
+  | { op: 'delete-transactions'; ids: string[] }
+  | { op: 'create-transfer'; fields: TransferFields }
+  | { op: 'update-transfer'; id: string; fields: TransferFields }
+  | { op: 'create-asset'; fields: AssetFields }
+  | { op: 'update-asset'; assetId: string; fields: AssetFields }
+  | { op: 'delete-asset'; assetId: string }
+  | { op: 'create-card'; fields: CardFields; outstanding: number }
+  | { op: 'update-card'; assetId: string; fields: CardFields }
+
+/** Applies one change on the phone. Rust refuses it without a recent backup. */
+export function applyWrite(baseUrl: string, op: WriteOp): Promise<void> {
+  return invoke<void>('mm_write', { baseUrl, op })
+}
