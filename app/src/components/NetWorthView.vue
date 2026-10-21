@@ -4,6 +4,7 @@ import { useSession } from '../stores/session'
 import { formatMoney } from '../domain/format'
 import LineChart from './LineChart.vue'
 import { useAccountMetadata } from '../stores/metadata'
+import { useCountUp } from '../composables/countUp'
 
 defineEmits<{ configure: [] }>()
 const metadata = useAccountMetadata()
@@ -17,6 +18,7 @@ function stack(shares: { name: string; amount: number }[]) {
   const total = shares.reduce((sum, s) => sum + Math.abs(s.amount), 0) || 1
   return shares.map((s) => ({ ...s, pct: (Math.abs(s.amount) / total) * 100 }))
 }
+const netShown = useCountUp(computed(() => current.value?.netWorth))
 const assetStack = computed(() => stack(current.value?.assetShares ?? []))
 const debtStack = computed(() => stack(current.value?.debtShares ?? []))
 </script>
@@ -38,7 +40,7 @@ const debtStack = computed(() => stack(current.value?.debtShares ?? []))
     <header v-else class="hero" :title="metadata.totals.netWorth !== null ? 'Source: live account balances + metadata' : `Source: ${d.source}`">
       <div>
         <span class="muted">Net worth today</span>
-        <strong class="amount">{{ formatMoney(current.netWorth!) }} <small>{{ metadata.state.baseCurrency }}</small></strong>
+        <strong class="amount">{{ formatMoney(netShown) }} <small>{{ metadata.state.baseCurrency }}</small></strong>
       </div>
       <dl>
         <div><dt>Assets</dt><dd class="amount income">{{ formatMoney(current.assets!) }}</dd></div>

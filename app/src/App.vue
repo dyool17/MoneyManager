@@ -12,20 +12,37 @@ import CardsView from './components/CardsView.vue'
 import BudgetsView from './components/BudgetsView.vue'
 import AccountMetadataView from './components/AccountMetadataView.vue'
 import PendingChanges from './components/PendingChanges.vue'
+import InsightsView from './components/InsightsView.vue'
+import HelpView from './components/HelpView.vue'
 
-type View = 'networth' | 'summary' | 'budgets' | 'movements' | 'accounts' | 'cards' | 'connection' | 'metadata'
+type View = 'help' | 'insights' | 'networth' | 'summary' | 'budgets' | 'movements' | 'accounts' | 'cards' | 'connection' | 'metadata'
 const session = useSession()
 const view = ref<View>('networth')
 
 const NAV: { id: View; label: string }[] = [
   { id: 'networth', label: 'Net worth' },
+  { id: 'insights', label: 'Insights' },
   { id: 'summary', label: 'Monthly summary' },
   { id: 'budgets', label: 'Budgets' },
   { id: 'movements', label: 'Transactions' },
   { id: 'accounts', label: 'Accounts' },
   { id: 'cards', label: 'Credit cards' },
   { id: 'metadata', label: 'Account metadata' },
+  { id: 'help', label: 'Help' },
 ]
+/** 24px stroke icons, drawn inline so the rail needs no icon font. */
+const ICONS: Record<View, string> = {
+  help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01',
+  insights: 'M4 19V9m5 10V5m5 14v-7m5 7V8',
+  networth: 'M3 17l5-5 4 4 8-8M15 8h5v5',
+  summary: 'M5 4h14v16H5zM9 9h6M9 13h6M9 17h3',
+  budgets: 'M12 3a9 9 0 1 0 9 9h-9z M14 3.5A9 9 0 0 1 20.5 10H14z',
+  movements: 'M7 7h13l-3-3M17 17H4l3 3',
+  accounts: 'M3 10l9-6 9 6M5 10v8m4-8v8m6-8v8m4-8v8M3 20h18',
+  cards: 'M3 6h18v12H3zM3 10h18M7 15h4',
+  metadata: 'M4 6h16M4 12h16M4 18h10',
+  connection: 'M8 3h8v18H8zM11 18h2',
+}
 const monthly = (v: View) => v === 'summary' || v === 'budgets' || v === 'movements' || v === 'accounts'
 
 onMounted(() => session.connect('demo'))
@@ -52,9 +69,13 @@ onMounted(() => session.connect('demo'))
         </span>
       </div>
       <button v-for="item in NAV" :key="item.id" :aria-current="view === item.id" @click="view = item.id">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path :d="ICONS[item.id]" /></svg>
         {{ item.label }}
       </button>
-      <button class="connect" :aria-current="view === 'connection'" @click="view = 'connection'">Connect phone</button>
+      <button class="connect" :aria-current="view === 'connection'" @click="view = 'connection'">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path :d="ICONS.connection" /></svg>
+        Connect phone
+      </button>
       <p class="readonly">
         <span v-if="session.backupState === 'done' && session.backup?.sqlite.status === 'saved'" class="saved">Backup saved</span>
         <span v-else-if="session.source === 'phone' && session.backupState !== 'running'" class="unsaved">No full backup yet</span>
@@ -64,11 +85,13 @@ onMounted(() => session.connect('demo'))
 
     <main>
       <StatusBanner />
-      <ConnectionPanel v-if="view === 'connection'" @connected="view = 'networth'" />
+      <HelpView v-if="view === 'help'" @go="view = $event as View" />
+      <ConnectionPanel v-else-if="view === 'connection'" @connected="view = 'networth'" />
       <template v-else-if="session.init">
         <PendingChanges />
         <PeriodHeader v-if="monthly(view)" />
-        <NetWorthView v-if="view === 'networth'" @configure="view = 'metadata'" />
+        <InsightsView v-if="view === 'insights'" />
+        <NetWorthView v-else-if="view === 'networth'" @configure="view = 'metadata'" />
         <SummaryView v-else-if="view === 'summary'" />
         <BudgetsView v-else-if="view === 'budgets'" />
         <MovementsTable v-else-if="view === 'movements'" />
@@ -104,14 +127,34 @@ onMounted(() => session.connect('demo'))
 .source { font-size: 0.8rem; color: var(--ink-soft); }
 .source.phone { color: var(--income); }
 .rail button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   text-align: left;
   border: none;
+  border-radius: 8px;
   background: transparent;
-  padding: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  color: var(--ink-soft);
+  transition: background 0.15s, color 0.15s;
 }
+.rail button:hover { background: var(--mist); color: var(--ink); }
+.rail button svg { width: 1.1rem; height: 1.1rem; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .rail button[aria-current='true'] {
-  background: var(--mist);
+  background: color-mix(in oklab, var(--accent) 12%, var(--paper));
+  color: var(--accent);
   font-weight: 600;
+}
+.rail button[aria-current='true']::before {
+  content: '';
+  position: absolute;
+  left: -0.75rem;
+  top: 0.35rem;
+  bottom: 0.35rem;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
 }
 .rail .connect { margin-top: 0.75rem; }
 .saved, .unsaved { display: block; font-weight: 600; margin-bottom: 0.25rem; }

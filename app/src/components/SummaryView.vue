@@ -2,11 +2,13 @@
 import { computed } from 'vue'
 import { useSession } from '../stores/session'
 import { formatMoney } from '../domain/format'
+import { useCountUp } from '../composables/countUp'
 
 const session = useSession()
 const s = computed(() => session.summary)
 
 /** Income and expense share one scale, so the bar shows how much of the income was spent. */
+const netShown = useCountUp(computed(() => s.value?.net))
 const scale = computed(() => Math.max(s.value?.income ?? 0, s.value?.expense ?? 0, 1))
 const pct = (n: number) => `${Math.min(100, (n / scale.value) * 100)}%`
 const budgetPct = (total: number, budget: number) => (budget > 0 ? Math.round((total / budget) * 100) : null)
@@ -17,7 +19,7 @@ const budgetPct = (total: number, budget: number) => (budget > 0 ? Math.round((t
     <div class="flow" :title="`Source: ${s.source}`">
       <div class="net">
         <span>Left over</span>
-        <strong :class="['amount', s.net >= 0 ? 'income' : 'expense']">{{ formatMoney(s.net) }}</strong>
+        <strong :class="['amount', s.net >= 0 ? 'income' : 'expense']">{{ formatMoney(netShown) }}</strong>
       </div>
       <div class="bars">
         <div class="bar">

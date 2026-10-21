@@ -178,6 +178,16 @@ export const useSession = defineStore('session', () => {
 
   /** Trend is fetched on demand and not part of the shared state. */
   const getAssetTrend = (assetId: string): Promise<MonthPoint[]> => client.getAssetTrend(assetId)
+  /** Movements over any span for reports, fetched on demand like the trend. */
+  const getHistory = (span: Period): Promise<Movement[]> => client.getMovements({ ...span, mbid: bookId.value })
+  /** One summary per period, sequentially, because the phone server handles one request at a time. */
+  async function getSummaries(periods: Period[]): Promise<Summary[]> {
+    const from = client
+    const mbid = bookId.value
+    const out: Summary[] = []
+    for (const p of periods) out.push(await from.getSummary({ ...p, mbid }))
+    return out
+  }
 
   return {
     source,
@@ -198,6 +208,8 @@ export const useSession = defineStore('session', () => {
     setBook,
     refresh,
     getAssetTrend,
+    getHistory,
+    getSummaries,
     backup,
     backupState,
     backupError,
