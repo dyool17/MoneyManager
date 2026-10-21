@@ -46,9 +46,12 @@ const SUGGESTIONS = [
 ]
 
 async function send(text = draft.value) {
+  if (!text.trim() || chat.sending) return
+  // Clear right away so the box is free while the answer arrives; put the
+  // question back only if it failed and nothing new was typed.
+  if (text === draft.value) draft.value = ''
   const ok = await chat.send(text)
-  if (ok) draft.value = ''
-  else if (!draft.value) draft.value = text
+  if (!ok && !draft.value) draft.value = text
 }
 function onKey(e: KeyboardEvent) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
