@@ -23,7 +23,7 @@ Una tasa de `7.78` para USD con moneda principal GTQ significa **1 USD = 7.78 GT
 | Cambio de nombre desde el respaldo | Muestra un aviso para revisar la metadata. |
 | Cambio de switch, moneda o tasa en el móvil | Importa un respaldo actualizado o modifica la configuración local; HTTP no permite detectar todos esos cambios. |
 
-El archivo se lee en memoria con SQLite WASM incluido en la aplicación, sin servicios externos. Sólo se guardan IDs, nombres, inclusión, monedas, tasas y fecha de importación en el almacenamiento local de la aplicación. No se importan transacciones ni se conserva una copia del archivo. Máximo: 64 MiB. Archivos cifrados, esquemas desconocidos y metadata inválida se rechazan sin reemplazar la configuración anterior.
+El archivo se lee en memoria con SQLite WASM incluido en la aplicación, sin servicios externos. Sólo se guardan IDs, nombres, inclusión, monedas, tasas y fecha de importación en el almacenamiento local de la aplicación. La importación de metadata no lee transacciones ni conserva una copia del archivo. (Aparte, **Insights → Open backup…** sí lee las transacciones de un respaldo para reportes sin conexión, sólo en memoria y sin guardarlas.) Máximo: 64 MiB. Archivos cifrados, esquemas desconocidos y metadata inválida se rechazan sin reemplazar la configuración anterior.
 
 ## Alcance de las cifras
 

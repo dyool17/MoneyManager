@@ -13,8 +13,9 @@ import BudgetsView from './components/BudgetsView.vue'
 import AccountMetadataView from './components/AccountMetadataView.vue'
 import PendingChanges from './components/PendingChanges.vue'
 import InsightsView from './components/InsightsView.vue'
+import HelpView from './components/HelpView.vue'
 
-type View = 'insights' | 'networth' | 'summary' | 'budgets' | 'movements' | 'accounts' | 'cards' | 'connection' | 'metadata'
+type View = 'help' | 'insights' | 'networth' | 'summary' | 'budgets' | 'movements' | 'accounts' | 'cards' | 'connection' | 'metadata'
 const session = useSession()
 const view = ref<View>('networth')
 
@@ -27,9 +28,11 @@ const NAV: { id: View; label: string }[] = [
   { id: 'accounts', label: 'Accounts' },
   { id: 'cards', label: 'Credit cards' },
   { id: 'metadata', label: 'Account metadata' },
+  { id: 'help', label: 'Help' },
 ]
 /** 24px stroke icons, drawn inline so the rail needs no icon font. */
 const ICONS: Record<View, string> = {
+  help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01',
   insights: 'M4 19V9m5 10V5m5 14v-7m5 7V8',
   networth: 'M3 17l5-5 4 4 8-8M15 8h5v5',
   summary: 'M5 4h14v16H5zM9 9h6M9 13h6M9 17h3',
@@ -82,7 +85,8 @@ onMounted(() => session.connect('demo'))
 
     <main>
       <StatusBanner />
-      <ConnectionPanel v-if="view === 'connection'" @connected="view = 'networth'" />
+      <HelpView v-if="view === 'help'" @go="view = $event as View" />
+      <ConnectionPanel v-else-if="view === 'connection'" @connected="view = 'networth'" />
       <template v-else-if="session.init">
         <PendingChanges />
         <PeriodHeader v-if="monthly(view)" />
