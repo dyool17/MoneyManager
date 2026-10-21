@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted } from 'vue'
 import Icon from './Icon.vue'
 import AiButton from './AiButton.vue'
 import PaceChart from './today/PaceChart.vue'
@@ -84,7 +84,6 @@ const plain = computed(() => {
 })
 
 onMounted(() => { if (history.state === 'idle') history.fromSession(12) })
-watch(() => [chat.ready, chat.context] as const, ([ok, ctx]) => { if (ok && ctx) brief.load(today) }, { immediate: true })
 </script>
 
 <template>
@@ -100,14 +99,15 @@ watch(() => [chat.ready, chat.context] as const, ([ok, ctx]) => { if (ok && ctx)
     <template v-else>
       <section class="card brief ai-surface" aria-label="Your brief">
         <div class="brief-text">
-          <div class="brief-label"><Icon name="sparkle" :size="14" />{{ chat.ready ? 'Your brief · written by the assistant from today\'s reports' : 'Your month in one line' }}</div>
+          <div class="brief-label"><Icon name="sparkle" :size="14" />{{ brief.state === 'ready' ? 'Your brief · written by the assistant from today\'s reports' : 'Your month in one line' }}</div>
           <p v-if="chat.ready && brief.state === 'ready'" class="lead">{{ brief.text }}</p>
-          <p v-else class="lead">{{ plain }}<span v-if="chat.ready && brief.state === 'loading'" class="writing"> Writing your brief…</span></p>
+          <p v-else class="lead">{{ plain }}</p>
           <p v-if="brief.state === 'failed'" class="muted small">The assistant could not write the brief: {{ brief.error }}</p>
           <div v-if="chat.ready" class="brief-actions">
             <button v-if="closing !== null && closing < 0" type="button" @click="nav.ask('How can I close this month\'s gap?', 'This month')">How can I close the gap?</button>
             <button type="button" @click="nav.ask('What changed most this month compared with my usual months?', 'This month')">What changed this month?</button>
-            <button type="button" class="link" :disabled="brief.state === 'loading'" @click="brief.load(today, true)">Rewrite</button>
+            <button v-if="brief.state === 'ready'" type="button" class="link" @click="brief.load(today, true)">Rewrite</button>
+            <button v-else type="button" class="link" :disabled="brief.state === 'loading' || !chat.context" @click="brief.load(today)">{{ brief.state === 'loading' ? 'Writing…' : 'Write my brief' }}</button>
           </div>
         </div>
         <div class="brief-side">
