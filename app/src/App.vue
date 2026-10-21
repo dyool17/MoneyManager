@@ -1,184 +1,125 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted } from 'vue'
 import { useSession } from './stores/session'
-import ConnectionPanel from './components/ConnectionPanel.vue'
-import PeriodHeader from './components/PeriodHeader.vue'
-import SummaryView from './components/SummaryView.vue'
-import MovementsTable from './components/MovementsTable.vue'
+import { useChat } from './stores/chat'
+import { SCREENS, useNav, type Screen } from './stores/nav'
+import { applyTheme } from './composables/theme'
+import Icon, { type IconName } from './components/Icon.vue'
 import StatusBanner from './components/StatusBanner.vue'
-import NetWorthView from './components/NetWorthView.vue'
-import AccountsView from './components/AccountsView.vue'
-import CardsView from './components/CardsView.vue'
-import BudgetsView from './components/BudgetsView.vue'
-import AccountMetadataView from './components/AccountMetadataView.vue'
-import PendingChanges from './components/PendingChanges.vue'
-import InsightsView from './components/InsightsView.vue'
+import AskBar from './components/AskBar.vue'
+import AskPanel from './components/AskPanel.vue'
+import TodayView from './components/TodayView.vue'
+import MoneyView from './components/MoneyView.vue'
+import SpendingView from './components/SpendingView.vue'
+import AnalysisView from './components/AnalysisView.vue'
+import SettingsView from './components/SettingsView.vue'
 import HelpView from './components/HelpView.vue'
-import ChatView from './components/ChatView.vue'
 
-type View = 'help' | 'chat' | 'insights' | 'networth' | 'summary' | 'budgets' | 'movements' | 'accounts' | 'cards' | 'connection' | 'metadata'
 const session = useSession()
-const view = ref<View>('networth')
+const chat = useChat()
+const nav = useNav()
 
-const NAV: { id: View; label: string }[] = [
-  { id: 'networth', label: 'Net worth' },
-  { id: 'insights', label: 'Insights' },
-  { id: 'chat', label: 'Ask AI' },
-  { id: 'summary', label: 'Monthly summary' },
-  { id: 'budgets', label: 'Budgets' },
-  { id: 'movements', label: 'Transactions' },
-  { id: 'accounts', label: 'Accounts' },
-  { id: 'cards', label: 'Credit cards' },
-  { id: 'metadata', label: 'Account metadata' },
-  { id: 'help', label: 'Help' },
-]
-/** 24px stroke icons, drawn inline so the rail needs no icon font. */
-const ICONS: Record<View, string> = {
-  chat: 'M4 5h16v11H9l-5 4zM8 9h8M8 12h5',
-  help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01',
-  insights: 'M4 19V9m5 10V5m5 14v-7m5 7V8',
-  networth: 'M3 17l5-5 4 4 8-8M15 8h5v5',
-  summary: 'M5 4h14v16H5zM9 9h6M9 13h6M9 17h3',
-  budgets: 'M12 3a9 9 0 1 0 9 9h-9z M14 3.5A9 9 0 0 1 20.5 10H14z',
-  movements: 'M7 7h13l-3-3M17 17H4l3 3',
-  accounts: 'M3 10l9-6 9 6M5 10v8m4-8v8m6-8v8m4-8v8M3 20h18',
-  cards: 'M3 6h18v12H3zM3 10h18M7 15h4',
-  metadata: 'M4 6h16M4 12h16M4 18h10',
-  connection: 'M8 3h8v18H8zM11 18h2',
-}
-const monthly = (v: View) => v === 'summary' || v === 'budgets' || v === 'movements' || v === 'accounts'
+const MAIN = SCREENS.filter((s) => s.id !== 'settings' && s.id !== 'help')
+const ICON: Record<Screen, IconName> = { today: 'today', money: 'money', spending: 'spending', analysis: 'analysis', settings: 'settings', help: 'help' }
 
-onMounted(() => session.connect('demo'))
+onMounted(() => {
+  applyTheme()
+  session.connect('demo')
+  chat.refreshStatus()
+})
 </script>
 
 <template>
-  <div class="shell">
+  <div :class="['shell', { asking: nav.askOpen }]">
     <nav class="rail" aria-label="Main">
-      <div class="book">
-        <select
-          v-if="(session.init?.books.length ?? 0) > 1"
-          id="book"
-          class="book-select"
-          aria-label="Book"
-          :value="session.bookId"
-          :disabled="session.status === 'loading'"
-          @change="session.setBook(($event.target as HTMLSelectElement).value)"
-        >
-          <option v-for="b in session.init?.books" :key="b.id" :value="b.id">{{ b.name }}</option>
-        </select>
-        <strong v-else>{{ session.init?.currentBook.name ?? 'Money Manager' }}</strong>
-        <span :class="['source', session.source]">
-          {{ session.source === 'demo' ? 'Demo data' : session.address }}
-        </span>
+      <div class="brand">
+        <span class="logo"><Icon name="logo" :size="16" /></span>
+        <div class="book">
+          <select
+            v-if="(session.init?.books.length ?? 0) > 1"
+            aria-label="Book"
+            :value="session.bookId"
+            :disabled="session.status === 'loading'"
+            @change="session.setBook(($event.target as HTMLSelectElement).value)"
+          >
+            <option v-for="b in session.init?.books" :key="b.id" :value="b.id">{{ b.name }}</option>
+          </select>
+          <strong v-else>{{ session.init?.currentBook.name ?? 'Money Manager' }}</strong>
+        </div>
       </div>
-      <button v-for="item in NAV" :key="item.id" :aria-current="view === item.id" @click="view = item.id">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path :d="ICONS[item.id]" /></svg>
-        {{ item.label }}
+
+      <button v-for="s in MAIN" :key="s.id" type="button" class="nav" :aria-current="nav.screen === s.id ? 'page' : undefined" @click="nav.go(s.id)">
+        <Icon :name="ICON[s.id]" />{{ s.label }}
       </button>
-      <button class="connect" :aria-current="view === 'connection'" @click="view = 'connection'">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path :d="ICONS.connection" /></svg>
-        Connect phone
+      <button v-if="chat.ready" type="button" class="nav" :aria-pressed="nav.askOpen" @click="nav.askOpen = !nav.askOpen">
+        <Icon name="sparkle" />Ask
       </button>
-      <p class="readonly">
-        <span v-if="session.backupState === 'done' && session.backup?.sqlite.status === 'saved'" class="saved">Backup saved</span>
-        <span v-else-if="session.source === 'phone' && session.backupState !== 'running'" class="unsaved">No full backup yet</span>
-        Changes are saved on your phone only after you confirm them.
-      </p>
+
+      <div class="spacer" />
+      <button type="button" class="nav" :aria-current="nav.screen === 'settings' ? 'page' : undefined" @click="nav.go('settings')"><Icon name="settings" />Settings</button>
+      <button type="button" class="nav" :aria-current="nav.screen === 'help' ? 'page' : undefined" @click="nav.go('help')"><Icon name="help" />Help</button>
+
+      <button type="button" class="status" @click="nav.go('settings', 'phone')">
+        <span :class="['dot', session.source === 'phone' ? 'live' : 'demo']" />
+        <span>
+          {{ session.source === 'phone' ? 'Phone connected' : 'Demo data' }}
+          <small>{{ session.source === 'phone' ? (session.backupState === 'done' ? 'Backup saved' : session.address) : 'Connect your phone' }}</small>
+        </span>
+      </button>
     </nav>
 
     <main>
+      <div class="top">
+        <AskBar />
+      </div>
       <StatusBanner />
-      <HelpView v-if="view === 'help'" @go="view = $event as View" />
-      <ConnectionPanel v-else-if="view === 'connection'" @connected="view = 'networth'" />
-      <template v-else-if="session.init">
-        <PendingChanges />
-        <PeriodHeader v-if="monthly(view)" />
-        <InsightsView v-if="view === 'insights'" />
-        <ChatView v-else-if="view === 'chat'" />
-        <NetWorthView v-else-if="view === 'networth'" @configure="view = 'metadata'" />
-        <SummaryView v-else-if="view === 'summary'" />
-        <BudgetsView v-else-if="view === 'budgets'" />
-        <MovementsTable v-else-if="view === 'movements'" />
-        <AccountsView v-else-if="view === 'accounts'" />
-        <CardsView v-else-if="view === 'cards'" />
-        <AccountMetadataView v-else-if="view === 'metadata'" />
+      <HelpView v-if="nav.screen === 'help'" @go="nav.go($event as Screen)" />
+      <SettingsView v-else-if="nav.screen === 'settings' || !session.init" />
+      <template v-else>
+        <TodayView v-if="nav.screen === 'today'" />
+        <MoneyView v-else-if="nav.screen === 'money'" />
+        <SpendingView v-else-if="nav.screen === 'spending'" />
+        <AnalysisView v-else-if="nav.screen === 'analysis'" />
       </template>
     </main>
+
+    <AskPanel v-if="nav.askOpen" class="panel" />
   </div>
 </template>
 
 <style scoped>
-.shell {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  min-height: 100vh;
+.shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100vh; }
+.shell.asking { grid-template-columns: 232px minmax(0, 1fr) minmax(320px, 380px); }
+.rail { display: flex; flex-direction: column; gap: 0.2rem; padding: 1.4rem 1rem; position: sticky; top: 0; height: 100vh; }
+.brand { display: flex; align-items: center; gap: 0.65rem; padding: 0.2rem 0.75rem 1.4rem; }
+.logo { width: 30px; height: 30px; flex: none; border-radius: 9px; background: var(--ink); color: var(--paper); display: inline-flex; align-items: center; justify-content: center; }
+.book { min-width: 0; }
+.book strong { font-size: 0.98rem; }
+.book select { font-weight: 600; max-width: 100%; padding: 0.2rem 0.4rem; }
+.nav { display: flex; align-items: center; gap: 0.75rem; border: 0; background: transparent; padding: 0.62rem 0.75rem; border-radius: 10px; color: var(--ink-soft); font-weight: 500; text-align: left; }
+.nav:hover { background: var(--hover); color: var(--ink); }
+.nav[aria-current='page'], .nav[aria-pressed='true'] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px rgb(17 19 24 / 0.06); }
+.nav[aria-pressed='true'] :deep(svg), .nav:last-of-type:hover :deep(svg) { color: var(--accent); }
+.spacer { flex: 1; }
+.status { margin-top: 0.7rem; display: flex; align-items: center; gap: 0.6rem; text-align: left; border: 0; border-radius: 10px; background: var(--paper); padding: 0.7rem 0.8rem; font-size: 0.8rem; }
+.status small { display: block; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; max-width: 150px; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.dot.live { background: var(--income); }
+.dot.demo { background: var(--neutral-mark); }
+main { padding: 1.4rem 2rem 3rem 0.5rem; min-width: 0; display: flex; flex-direction: column; gap: 1.25rem; }
+.shell.asking main { padding-right: 1rem; }
+.top { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+.panel { margin: 1.4rem 1.4rem 1.4rem 0; }
+@media (max-width: 1100px) {
+  .shell.asking { grid-template-columns: 232px minmax(0, 1fr); }
+  .shell.asking .panel { grid-column: 2; margin: 0 1rem 2rem 0.5rem; }
 }
-.rail {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding: 1.25rem 0.75rem;
-  border-right: 1px solid var(--rule);
-  background: var(--paper);
-}
-.book {
-  display: flex;
-  flex-direction: column;
-  padding: 0 0.5rem 1.25rem;
-}
-.book strong { font-size: 1.05rem; }
-.book-select { font-weight: 600; margin-bottom: 0.2rem; }
-.source { font-size: 0.8rem; color: var(--ink-soft); }
-.source.phone { color: var(--income); }
-.rail button {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  text-align: left;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  padding: 0.5rem 0.6rem;
-  color: var(--ink-soft);
-  transition: background 0.15s, color 0.15s;
-}
-.rail button:hover { background: var(--mist); color: var(--ink); }
-.rail button svg { width: 1.1rem; height: 1.1rem; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.rail button[aria-current='true'] {
-  background: color-mix(in oklab, var(--accent) 12%, var(--paper));
-  color: var(--accent);
-  font-weight: 600;
-}
-.rail button[aria-current='true']::before {
-  content: '';
-  position: absolute;
-  left: -0.75rem;
-  top: 0.35rem;
-  bottom: 0.35rem;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--accent);
-}
-.rail .connect { margin-top: 0.75rem; }
-.saved, .unsaved { display: block; font-weight: 600; margin-bottom: 0.25rem; }
-.saved { color: var(--income); }
-.unsaved { color: var(--warn-ink); }
-.readonly {
-  margin-top: auto;
-  padding: 0 0.5rem;
-  font-size: 0.8rem;
-  color: var(--ink-soft);
-}
-main {
-  padding: 1.5rem 2.5rem 3rem;
-  max-width: 1200px;
-  width: 100%;
-}
-@media (max-width: 720px) {
-  .shell { grid-template-columns: 1fr; }
-  .rail { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--rule); }
-  .readonly { display: none; }
+@media (max-width: 760px) {
+  .shell, .shell.asking { grid-template-columns: 1fr; }
+  .rail { position: static; height: auto; flex-direction: row; flex-wrap: wrap; padding: 0.8rem; }
+  .brand { width: 100%; padding-bottom: 0.6rem; }
+  .spacer, .status { display: none; }
   main { padding: 1rem; }
+  .shell.asking .panel { grid-column: 1; margin: 0 1rem 1rem; }
 }
 </style>

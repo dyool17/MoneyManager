@@ -1,17 +1,39 @@
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/space-grotesk';
+
+/*
+ * Design tokens. Older names (--mist, --paper, --ink…) stay so every view
+ * shares one palette: --mist is the page ground, --paper a card surface.
+ */
 :root {
-  --mist: #edf0f2;
-  --paper: #f8f9fa;
-  --ink: #17212b;
-  --ink-soft: #5a6672;
-  --rule: #d5dbe0;
-  --income: #12715b;
-  --expense: #8c2f55;
-  --transfer: #5e6e80;
-  --accent: #2747c4;
-  --warn-bg: #fbeee3;
-  --warn-ink: #7a3a10;
+  --mist: #f3f4f6;
+  --paper: #ffffff;
+  --ink: #111318;
+  --ink-soft: #5b616e;
+  --rule: #e3e5ea;
+  --track: #eef0f3;
+  --hover: #eceef2;
+  --income: #0f766e;
+  --expense: #c2410c;
+  --transfer: #5b616e;
+  --accent: #3f51d9;
+  --accent-soft: #eef0fd;
+  --accent-line: #d9ddfb;
+  --accent-ink: #2c3bb0;
+  --neutral-mark: #9aa1ae;
+  --warn-bg: #fff4e5;
+  --warn-ink: #8a4b00;
+  /* The dark "AI" surface used for briefs and reports. */
+  --ai-bg: #111318;
+  --ai-raise: #22252d;
+  --ai-line: #2e323c;
+  --ai-ink: #f3f4f6;
+  --ai-soft: #a6acb8;
+  --ai-accent: #aeb4ff;
+  --radius: 14px;
+  --font-display: 'Space Grotesk Variable', 'Inter Variable', system-ui, sans-serif;
   color-scheme: light;
-  font-family: 'Inter', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Inter Variable', 'Inter', 'Segoe UI Variable', system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.5;
   color: var(--ink);
@@ -20,46 +42,99 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --mist: #141b22;
-    --paper: #1b242d;
-    --ink: #e4e9ee;
-    --ink-soft: #94a1ad;
-    --rule: #2c3844;
-    --income: #4cc2a2;
-    --expense: #e07aa3;
-    --transfer: #9aabbd;
-    --accent: #8ba2ff;
-    --warn-bg: #3a2614;
-    --warn-ink: #f2c49c;
+  :root:not([data-theme='light']) {
+    --mist: #0f1115;
+    --paper: #181b21;
+    --ink: #eef0f4;
+    --ink-soft: #a0a6b2;
+    --rule: #2a2e37;
+    --track: #262a33;
+    --hover: #20242c;
+    --income: #4fd1b5;
+    --expense: #fb923c;
+    --transfer: #a0a6b2;
+    --accent: #8e9bff;
+    --accent-soft: #23284a;
+    --accent-line: #343b6b;
+    --accent-ink: #c3caff;
+    --neutral-mark: #6b7280;
+    --warn-bg: #3a2a12;
+    --warn-ink: #f5c97b;
+    --ai-bg: #1d2142;
+    --ai-raise: #282d55;
+    --ai-line: #363c6c;
     color-scheme: dark;
   }
+}
+:root[data-theme='dark'] {
+  --mist: #0f1115;
+  --paper: #181b21;
+  --ink: #eef0f4;
+  --ink-soft: #a0a6b2;
+  --rule: #2a2e37;
+  --track: #262a33;
+  --hover: #20242c;
+  --income: #4fd1b5;
+  --expense: #fb923c;
+  --transfer: #a0a6b2;
+  --accent: #8e9bff;
+  --accent-soft: #23284a;
+  --accent-line: #343b6b;
+  --accent-ink: #c3caff;
+  --neutral-mark: #6b7280;
+  --warn-bg: #3a2a12;
+  --warn-ink: #f5c97b;
+  --ai-bg: #1d2142;
+  --ai-raise: #282d55;
+  --ai-line: #363c6c;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--mist); }
 
-button, input, select { font: inherit; color: inherit; }
+button, input, select, textarea { font: inherit; color: inherit; }
 
 button {
   border: 1px solid var(--rule);
   background: var(--paper);
-  border-radius: 6px;
-  padding: 0.4rem 0.8rem;
+  border-radius: 9px;
+  padding: 0.4rem 0.85rem;
   cursor: pointer;
 }
 button:hover { border-color: var(--ink-soft); }
 button:disabled { opacity: 0.5; cursor: default; }
-button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary { background: var(--ink); border-color: var(--ink); color: var(--paper); }
 
-input, select {
+input, select, textarea {
   border: 1px solid var(--rule);
   background: var(--paper);
-  border-radius: 6px;
-  padding: 0.4rem 0.6rem;
+  border-radius: 9px;
+  padding: 0.45rem 0.65rem;
 }
 
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+h1, h2, h3 { letter-spacing: -0.02em; }
+h1 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.03em; }
+
+/* Shared building blocks for every screen. */
+.card { background: var(--paper); border-radius: var(--radius); padding: 1.4rem 1.5rem; }
+.card > h2:first-child, .card-head h2 { margin: 0; font-size: 1.05rem; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; margin-bottom: 0.9rem; }
+.label { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
+.muted { color: var(--ink-soft); }
+.num { font-family: var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.big { font-size: 2rem; font-weight: 600; line-height: 1.15; }
+.ai-surface { background: var(--ai-bg); color: var(--ai-ink); }
+.ai-surface .muted { color: var(--ai-soft); }
+.pill { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2.2rem; padding: 0 0.85rem; border-radius: 999px; font-size: 0.87rem; font-weight: 500; }
+.pill.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.seg { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--hover); gap: 2px; }
+.seg button { border: 0; background: transparent; padding: 0.35rem 0.85rem; border-radius: 8px; font-size: 0.87rem; font-weight: 500; color: var(--ink-soft); }
+.seg button[aria-pressed='true'], .seg button[aria-selected='true'] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px rgb(17 19 24 / 0.08); }
+.track { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.track > span { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
 
 .amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .income { color: var(--income); }
