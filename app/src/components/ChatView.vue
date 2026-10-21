@@ -16,7 +16,7 @@ const log = ref<HTMLElement | null>(null)
 const PROVIDERS: { id: AiProvider; label: string; hint: string; placeholder: string; models: string[] }[] = [
   { id: 'claude-cli', label: 'Claude subscription', hint: 'Uses the Claude Code app on this computer, signed in with your Claude plan.', placeholder: 'Default (for example sonnet or opus)', models: ['sonnet', 'opus', 'haiku'] },
   { id: 'codex-cli', label: 'ChatGPT subscription', hint: 'Uses the Codex CLI on this computer, signed in with your ChatGPT plan.', placeholder: 'Default (from your Codex settings)', models: [] },
-  { id: 'openai-compatible', label: 'API key (OpenCode Go)', hint: 'Any OpenAI-compatible endpoint. OpenCode Go is the default; billing follows that service.', placeholder: 'Required, for example glm-5.3-flash', models: ['glm-5.3-flash', 'kimi-k2'] },
+  { id: 'openai-compatible', label: 'API key (OpenCode Go)', hint: 'Any OpenAI-compatible endpoint. OpenCode Go is the default; billing follows that service.', placeholder: 'Required, for example minimax-m3.1-flash-free', models: ['minimax-m3.1-flash-free', 'glm-5.3-flash', 'kimi-k2'] },
 ]
 const current = computed(() => PROVIDERS.find((p) => p.id === chat.settings.provider)!)
 const ready = computed(() => {
