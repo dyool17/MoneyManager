@@ -8,10 +8,13 @@ import { useCountUp } from '../../composables/countUp'
 import BarChart from '../BarChart.vue'
 import AiButton from '../AiButton.vue'
 import { useHealth } from './useHealth'
+import MonthlyReport from './MonthlyReport.vue'
+import GoalPlanner from './GoalPlanner.vue'
 
 const props = defineProps<{ r: Insights; first: string; last: string }>()
 const emit = defineEmits<{ tab: [tab: 'risks' | 'opportunities'] }>()
 const history = useHistory()
+const leftOver = computed(() => props.r.months.reduce((a, m) => a + m.income, 0) / (props.r.months.length || 1) - props.r.averageExpense)
 const r = computed(() => props.r)
 const { score, word, unknown, topRisks } = useHealth(r, computed(() => history.movements), computed(() => props.first), computed(() => props.last))
 
@@ -147,12 +150,17 @@ const oppLabel = (o: Insights['opportunities'][number]) => (o.month ? `Spent mor
       </div>
     </div>
 
-    <!-- T6: monthly AI report -->
-    <!-- T6: goal planner -->
+    <div class="ov-ai">
+      <MonthlyReport :months="r.months" :today="last" class="ov-report" />
+      <GoalPlanner :today="last" :left-over="leftOver" class="ov-goal" />
+    </div>
   </div>
 </template>
 
 <style scoped>
+.ov-ai { display: flex; flex-wrap: wrap; gap: 1rem; align-items: stretch; }
+.ov-report { flex: 1.4 1 460px; }
+.ov-goal { flex: 1 1 300px; }
 .ov-score { display: grid; grid-template-columns: auto 1fr; gap: 2.5rem; align-items: center; }
 .dial { position: relative; width: 150px; height: 150px; }
 .dial svg { width: 100%; height: 100%; transform: rotate(-90deg); }

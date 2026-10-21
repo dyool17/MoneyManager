@@ -19,13 +19,16 @@ export const useNav = defineStore('nav', () => {
   const section = ref<string | null>(null)
   const askOpen = ref(false)
   /** What the user is looking at, so the assistant can answer in context. */
-  const focus = ref<string | null>(null)
+  const focus = ref<string | null>('Today screen (how this month is going)')
   /** A question waiting for the Ask panel to send it. */
   const pending = ref<string | null>(null)
 
   function go(to: Screen, sectionId: string | null = null) {
     screen.value = to
     section.value = sectionId
+    // The assistant follows the user: a new screen becomes what it answers about.
+    const s = SCREENS.find((x) => x.id === to)
+    if (s && to !== 'settings' && to !== 'help') focus.value = `${s.label} screen (${s.hint.toLowerCase()})`
   }
 
   /** Opens the Ask panel; with a question, sends it about the given focus. */
