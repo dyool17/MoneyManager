@@ -13,7 +13,7 @@ Objective: explain spending spikes with life events and seasonal budgets, feed t
 
 | ID | Specs | Route | Status | Commit |
 |---|---|---|---|---|
-| T1 | S3 | inline | pending | |
+| T1 | S3 | inline | code done; live mcscid check pending | e672ad2, 2026-10-22 |
 | T2 | S1, S2 | inline | pending | |
 | T3 | S4 | inline | pending | |
 
@@ -25,3 +25,4 @@ Objective: explain spending spikes with life events and seasonal budgets, feed t
 - L4 (2026-10-21): User chose "si" to reading budgets from the backup the app saves on each connection. Correction found before any code: that premise is false. PC Manager answers `money.sqlite` with zero bytes (docs/PC-MANAGER-LIMITS.md:31) and all six local auto backups record `sqlite: empty`; no PC Manager endpoint exposes budgets. The only source of subcategory budgets is a native `.mmbak` the user exports from the phone, imported like account metadata (`loadNativeMetadata`). Awaiting user confirmation of that import flow.
 - L5 (2026-10-21): "dale" to importing budgets from a user-exported `.mmbak`, stored locally with its import date.
 - L6 (2026-10-21): T1 partial. Done: `domain/budget-plan.ts` (budgetAmount, evaluateBudgets monthly vs annual Jan-to-date, suggestsAnnual, validateBudgetState) and `infrastructure/native-budgets.ts` (reads BUDGET/BUDGET_AMOUNT by category uid), with tests (RED observed, then GREEN). Assumption: annual = calendar year. Next: add `subcategoryId` in `infrastructure/backup-history.ts`; `stores/budgets.ts` (key `mm.budget-plan.v1.<metadata.scope>`, reuse `useAccountMetadata().scope`); Spending budget card with import, imported date, monthly/annual toggle and suggestion; check against the real .mmbak; check phone `mcscid` == `ZCATEGORY.uid` live.
+- L7 (2026-10-22): T1 code complete. `infrastructure/backup-history.ts` now emits `subcategoryId` (t.ctgUid) with a new test (RED then GREEN; a top-level expense carries its own category id there, which is correct). `stores/budgets.ts` persists `mm.budget-plan.v1.<scope>` with modes surviving re-import and failed persistence leaving state unchanged (3 tests). `spending/BudgetPlanCard.vue` added under "Categories and budgets": import control, imported date, per-budget monthly/annual seg toggle, judged spent/budget and state, suggestion chips from `suggestAnnual`. The user's real backup reads 20 budgets (Regalos, Viajes, Vivienda, Deducciones…) with month overrides; 2838 backup movements match an imported budget uid, so `BUDGET.targetUid` == `ZCATEGORY.uid` == `INOUTCOME.ctgUid` holds in real data. Pending: a live phone session to confirm PC Manager `mcscid` equals `ZCATEGORY.uid` (fixtures are synthetic and can't prove it). Suite: 144 tests pass, vue-tsc clean.

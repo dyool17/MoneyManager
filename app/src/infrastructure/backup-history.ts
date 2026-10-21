@@ -10,18 +10,19 @@ export function readBackupHistory(bytes: Uint8Array, SQL: SqlJsStatic, today: st
   try {
     db.run('PRAGMA query_only=ON; PRAGMA trusted_schema=OFF')
     const rows = db.exec(`SELECT t.uid, t.WDATE, t.assetUid, t.toAssetUid, a.NIC_NAME, t.DO_TYPE, t.ZMONEY, t.ZCONTENT, t.ZDATA,
-        COALESCE(p.uid, c.uid), COALESCE(p.NAME, c.NAME), CASE WHEN p.uid IS NULL THEN NULL ELSE c.NAME END
+        COALESCE(p.uid, c.uid), COALESCE(p.NAME, c.NAME), CASE WHEN p.uid IS NULL THEN NULL ELSE c.NAME END, t.ctgUid
       FROM INOUTCOME t
       LEFT JOIN ASSETS a ON a.uid = t.assetUid
       LEFT JOIN ZCATEGORY c ON c.uid = t.ctgUid
       LEFT JOIN ZCATEGORY p ON p.uid = c.pUid AND c.pUid <> '0'
       WHERE t.IS_DEL = 0`)[0]?.values ?? []
-    return rows.map(([id, date, assetId, toAssetId, account, code, money, content, detail, categoryId, categoryName, subcategoryName]) => {
+    return rows.map(([id, date, assetId, toAssetId, account, code, money, content, detail, categoryId, categoryName, subcategoryName, subcategoryId]) => {
       const d = String(date)
       return {
         id: String(id), date: d, assetId: String(assetId ?? ''), toAssetId: toAssetId ? String(toAssetId) : undefined,
         accountName: String(account ?? ''), categoryId: categoryId ? String(categoryId) : undefined,
-        categoryName: categoryName ? String(categoryName) : undefined, subcategoryName: subcategoryName ? String(subcategoryName) : undefined,
+        categoryName: categoryName ? String(categoryName) : undefined, subcategoryId: subcategoryId ? String(subcategoryId) : undefined,
+        subcategoryName: subcategoryName ? String(subcategoryName) : undefined,
         content: content ? String(content).trim() : undefined, detail: detail ? String(detail).trim() : undefined,
         amount: Number(money) || 0, type: TYPES[String(code)] ?? 'unknown', rawCode: String(code), isFuture: d > today,
       }

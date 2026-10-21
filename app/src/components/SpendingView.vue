@@ -16,6 +16,7 @@ import PeriodHeader from './PeriodHeader.vue'
 import MovementsTable from './MovementsTable.vue'
 import ChangeDialog, { type Draft } from './ChangeDialog.vue'
 import CategoryBars from './spending/CategoryBars.vue'
+import BudgetPlanCard from './spending/BudgetPlanCard.vue'
 import AiButton from './AiButton.vue'
 import Icon from './Icon.vue'
 
@@ -148,6 +149,8 @@ function clearFilters() {
         {{ unbudgeted.length }} categories have no budget: {{ unbudgeted.map((r) => r.name).join(', ') }}.
       </p>
     </div>
+
+    <BudgetPlanCard />
 
     <div class="card cats">
       <div class="card-head"><h2>Income by category</h2></div>
