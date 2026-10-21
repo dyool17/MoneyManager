@@ -15,8 +15,8 @@ Objective: chat with an AI about the user's reports. Branch `feat/ai-chat`. Deli
 
 | ID | Specs | Route | Status | Commit |
 |---|---|---|---|---|
-| T1 | S2, S4, S5 | inline | pending | |
-| T2 | S1, S3, S5, S6 | inline | pending | |
+| T1 | S2, S4, S5 | inline | done | b541730 |
+| T2 | S1, S3, S5, S6 | inline | done | next commit |
 
 ## Log
 
@@ -25,3 +25,5 @@ Objective: chat with an AI about the user's reports. Branch `feat/ai-chat`. Deli
 - L3: "y opencodeGo? esa va por apikey dispongamos también de ese"
 - L4: Probes: `claude -p --tools "" --no-session-persistence --strict-mcp-config --setting-sources ""` answered OK. `codex exec --ephemeral --skip-git-repo-check -s read-only -o FILE -` reached the account, which hit its usage limit (exit 1, message on stderr).
 - Route: inline, no writer trigger (two dependent units, parent context fine).
+- L5: T1 done: 9 Rust tests (commands, timeouts, error line, key 0600, URL policy, OpenAI parse). Live `cargo test live_claude -- --ignored` passed (3.2 s).
+- L6: T2 done: context builder, safe markdown, chat store and view, Help and README. 76 Vitest tests pass. Pending: Codex live answer (account at usage limit) and OpenCode Go (no key available); UI not exercised inside the Tauri window.

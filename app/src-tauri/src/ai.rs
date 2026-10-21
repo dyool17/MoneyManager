@@ -424,6 +424,21 @@ mod tests {
         assert!(parse_openai(200, "{}").is_err());
     }
 
+    /// Live call through the installed Claude Code CLI. Run with `cargo test live_claude -- --ignored`.
+    #[test]
+    #[ignore]
+    fn live_claude_answers_from_context() {
+        let r = ChatRequest {
+            provider: Provider::ClaudeCli,
+            system: "Answer with one number only. Reports: average monthly spending 1234.50.".into(),
+            messages: vec![msg("user", "What is my average monthly spending?")],
+            model: None,
+            base_url: None,
+        };
+        let answer = chat_cli(&r, &scratch("live")).unwrap();
+        assert!(answer.contains("1234.5") || answer.contains("1,234.5"), "{answer}");
+    }
+
     #[cfg(unix)]
     #[test]
     fn stores_the_key_private_and_removes_it() {

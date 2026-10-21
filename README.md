@@ -10,6 +10,7 @@ App de escritorio para ver y analizar en la computadora los datos de la app móv
 |---|---|
 | **Net worth** | Patrimonio actual, evolución mensual y en qué cuentas está tu dinero. |
 | **Insights** | Puntaje de salud financiera, riesgos, fortalezas, oportunidades de ahorro y patrones de gasto de hasta 12 meses. |
+| **Ask AI** | Chat sobre tus reportes con Claude, ChatGPT u OpenCode Go. |
 | **Monthly summary** | Ingresos, gastos y categorías de un mes. |
 | **Budgets** | Avance de cada presupuesto en el mes. |
 | **Transactions** | Movimientos del mes; crear, editar y eliminar con confirmación. |
@@ -38,9 +39,23 @@ Todos los cálculos son deterministas: reglas fijas sobre tus datos, sin modelos
 
 Sin el teléfono a mano, **Open backup…** carga un respaldo `.mmbak` y calcula los reportes sin conexión. El archivo se lee en memoria y no se guarda.
 
+## Chat con IA (Ask AI)
+
+Conversa sobre tus reportes con tres tipos de proveedor:
+
+| Proveedor | Cómo se conecta | Quién cobra |
+|---|---|---|
+| **Suscripción de Claude** | CLI oficial de Claude Code (`claude -p`), sin herramientas ni sesiones guardadas. | Tu plan de Claude. |
+| **Suscripción de ChatGPT** | CLI oficial de Codex (`codex exec`), en modo de solo lectura. | Tu plan de ChatGPT. |
+| **API key (OpenCode Go u otro compatible con OpenAI)** | `POST {base}/chat/completions`. Base por defecto: `https://opencode.ai/zen/go/v1`. | El servicio de la key. |
+
+Las suscripciones se usan a través de sus CLIs oficiales porque Anthropic no permite usar el login de Claude en apps de terceros. Para usarlas, instala el CLI correspondiente e inicia sesión una vez (`claude` o `codex login`).
+
+Privacidad: el asistente recibe las mismas cifras agregadas que muestra Insights. Los nombres de comercios y notas se envían sólo si activas **Share transaction descriptions**. En **What is shared** ves el texto exacto que se envía. La conversación no se guarda. La API key se guarda en la carpeta de datos de la app con permisos `0600` y nunca vuelve a la interfaz.
+
 ## Seguridad de los datos
 
-- Todo se queda en tu computadora. No hay servidores externos.
+- Todo se queda en tu computadora. Sólo el chat con IA envía datos fuera, y únicamente al proveedor que elijas.
 - Al conectar, la app guarda un respaldo automático.
 - Cualquier cambio en el teléfono pide confirmación y exige un respaldo de los últimos 30 minutos.
 - Si el teléfono no está disponible, los cambios esperan en una bandeja local (outbox) y no se pierden.
