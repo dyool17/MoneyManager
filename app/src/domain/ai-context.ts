@@ -2,6 +2,7 @@ import type { Movement } from './types'
 import { analyze } from './insights'
 import { cushionMonths, futureCommitments, greenStreak, healthScore, mainGroupShares, outliers, projectMonth, volatility } from './health'
 import { budgetHistory, type MonthBudget } from './budget-history'
+import { describeEvents, excludeOneOffFromBaseline, type LifeEvent } from './life-events'
 
 /**
  * The text the assistant reads. Built only from deterministic reports so every figure
@@ -17,6 +18,8 @@ export interface ContextInput {
   debts: number | null
   budgets: MonthBudget[]
   includeDetails: boolean
+  /** User-recorded life events; labels go in only when `includeDetails` is on. */
+  events?: LifeEvent[]
 }
 
 const n = (v: number) => (Math.round(v * 100) / 100).toFixed(2)
@@ -32,7 +35,7 @@ export function buildContext(input: ContextInput): string {
   const cushion = input.liquid === null ? null : cushionMonths(input.liquid, r.averageExpense)
   const vol = volatility(r.months.filter((m) => m.month < input.last.slice(0, 7)))
   const score = healthScore({ savingsRate: r.savingsRate, cushion, cardDebt: Math.abs(input.debts ?? 0), averageIncome, volatility: vol, months: r.months })
-  const projection = projectMonth(input.movements, input.last, r.months)
+  const projection = projectMonth(input.movements, input.last, excludeOneOffFromBaseline(r.months, input.events ?? [], input.movements))
   const commitments = futureCommitments(input.movements, input.last)
   const budgets = budgetHistory(input.budgets.filter((b) => b.month >= input.first.slice(0, 7)))
   const lines: string[] = []
@@ -94,6 +97,16 @@ export function buildContext(input: ContextInput): string {
     for (const m of inRange.filter((m) => m.type === 'expense' && !m.isFuture && m.date >= cutoff).sort((a, b) => b.amount - a.amount).slice(0, 30)) {
       add(`- ${m.date} ${m.subcategoryName || m.categoryName}: "${oneLine(m.content ?? '')}" ${n(m.amount)}`)
     }
+  }
+  const eventNames = new Map<string, string>()
+  for (const m of input.movements) {
+    if (m.categoryId && m.categoryName) eventNames.set(m.categoryId, m.categoryName)
+    if (m.subcategoryId && m.subcategoryName) eventNames.set(m.subcategoryId, m.subcategoryName)
+  }
+  const events = describeEvents(input.events ?? [], input.first, input.last, input.includeDetails, eventNames)
+  if (events.length) {
+    add()
+    for (const e of events) add(e)
   }
   return lines.join('\n')
 }

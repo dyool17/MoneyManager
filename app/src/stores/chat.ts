@@ -6,6 +6,7 @@ import { earliestDate, extractQueries, MAX_ROUNDS, QUERY_GUIDE, runQuery } from 
 import { useHistory } from './history'
 import { useSession } from './session'
 import { useAccountMetadata } from './metadata'
+import { useLifeEvents } from './life-events'
 import { useLiquid } from '../composables/liquid'
 
 const SETTINGS_KEY = 'mm.chatSettings'
@@ -56,6 +57,7 @@ export const useChat = defineStore('chat', () => {
   const history = useHistory()
   const session = useSession()
   const metadata = useAccountMetadata()
+  const lifeEvents = useLifeEvents()
   const { liquid } = useLiquid()
 
   const context = computed(() => {
@@ -71,6 +73,7 @@ export const useChat = defineStore('chat', () => {
       movements: history.movements, first, last: history.span.last,
       currency: metadata.state.baseCurrency, liquid: session.assets.length ? liquid.value : null, debts,
       budgets: history.budgets, includeDetails: settings.value.includeDetails,
+      events: lifeEvents.state.events,
     })
   })
 

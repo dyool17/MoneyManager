@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildContext } from './ai-context'
 import type { Movement } from './types'
+import type { LifeEvent } from './life-events'
 
 let id = 0
 const mv = (date: string, amount: number, type: Movement['type'] = 'expense', content = 'Secret Shop'): Movement => ({
@@ -28,6 +29,29 @@ describe('AI context', () => {
     const text = buildContext({ ...base, liquid: null, debts: null, includeDetails: false })
     expect(text).toContain('- Spendable balance and emergency cushion: unknown (no account balances in this data); the cushion part of the score counts it as 0, so do not call it a fact.')
     expect(text).toContain('- Total debt: unknown; the debt part of the score assumes no debt, so do not call it a strength.')
+  })
+
+  it('adds life events to the context and keeps labels behind the sharing toggle', () => {
+    const events: LifeEvent[] = [{ id: 'e1', label: 'Moving', start: '2026-09-20', end: '2026-09-25', categoryIds: ['sub-food'], kind: 'one-off' }]
+    const spike = { ...mv('2026-09-20', 500), subcategoryId: 'sub-food', categoryId: 'cat-var' }
+    const plain = buildContext({ ...base, movements: [...base.movements, spike], includeDetails: false })
+    expect(plain).not.toContain('## Life events')
+    const shared = buildContext({ ...base, movements: [...base.movements, spike], includeDetails: false, events })
+    expect(shared).toContain('## Life events')
+    expect(shared).toContain('- 2026-09-20 to 2026-09-25: One-off in Food; exclude these days from the projection baseline.')
+    expect(shared).not.toContain('Moving')
+    const detailed = buildContext({ ...base, movements: [...base.movements, spike], includeDetails: true, events })
+    expect(detailed).toContain('- "Moving" 2026-09-20 to 2026-09-25: One-off in Food;')
+  })
+
+  it('excludes one-off event spending from the projection baseline', () => {
+    const events: LifeEvent[] = [{ id: 'e1', label: 'Moving', start: '2026-09-20', end: '2026-09-25', categoryIds: ['sub-food'], kind: 'one-off' }]
+    const spike = { ...mv('2026-09-20', 500), subcategoryId: 'sub-food', categoryId: 'cat-var' }
+    const plain = buildContext({ ...base, movements: [...base.movements, spike], includeDetails: false })
+    expect(plain).toMatch(/past months averaged 600\.00 spending/)
+    const withEvents = buildContext({ ...base, movements: [...base.movements, spike], includeDetails: false, events })
+    expect(withEvents).toMatch(/past months averaged 100\.00 spending/)
+    expect(withEvents).toContain('- 2026-09: 1000.00 / 600.00 / 400.00')
   })
 
   it('keeps transaction descriptions out unless allowed', () => {
