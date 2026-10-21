@@ -16,7 +16,7 @@ const log = ref<HTMLElement | null>(null)
 const PROVIDERS: { id: AiProvider; label: string; hint: string; placeholder: string; models: string[] }[] = [
   { id: 'claude-cli', label: 'Claude subscription', hint: 'Uses the Claude Code app on this computer, signed in with your Claude plan.', placeholder: 'Default (for example sonnet or opus)', models: ['sonnet', 'opus', 'haiku'] },
   { id: 'codex-cli', label: 'ChatGPT subscription', hint: 'Uses the Codex CLI on this computer, signed in with your ChatGPT plan.', placeholder: 'Default (from your Codex settings)', models: [] },
-  { id: 'openai-compatible', label: 'API key (OpenCode Go)', hint: 'Any OpenAI-compatible endpoint. OpenCode Go is the default; billing follows that service.', placeholder: 'Required, for example kimi-k2', models: [] },
+  { id: 'openai-compatible', label: 'API key (OpenCode Go)', hint: 'Any OpenAI-compatible endpoint. OpenCode Go is the default; billing follows that service.', placeholder: 'Required, for example glm-5.3-flash', models: ['glm-5.3-flash', 'kimi-k2'] },
 ]
 const current = computed(() => PROVIDERS.find((p) => p.id === chat.settings.provider)!)
 const ready = computed(() => {
@@ -202,7 +202,7 @@ legend { font-weight: 600; margin-bottom: 0.4rem; }
 .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-soft); animation: blink 1.2s infinite ease-in-out; }
 .typing i:nth-child(2) { animation-delay: 0.15s; } .typing i:nth-child(3) { animation-delay: 0.3s; }
 .composer { display: flex; gap: 0.6rem; align-items: flex-end; }
-.composer textarea { flex: 1; resize: vertical; min-height: 3rem; border-radius: 10px; padding: 0.6rem 0.75rem; }
+.composer textarea { flex: 1; font: inherit; color: inherit; background: var(--paper); border: 1px solid var(--rule); resize: vertical; min-height: 3rem; border-radius: 10px; padding: 0.6rem 0.75rem; }
 .composer button { height: 3rem; padding: 0 1.3rem; border-radius: 10px; }
 .notice { margin: 0; padding: 0.6rem 0.85rem; border-radius: 8px; background: var(--mist); color: var(--ink-soft); }
 .error { margin: 0; padding: 0.6rem 0.85rem; border-radius: 8px; background: var(--warn-bg); color: var(--warn-ink); }

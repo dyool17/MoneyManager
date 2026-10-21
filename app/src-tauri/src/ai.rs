@@ -303,6 +303,14 @@ pub fn parse_openai(status: u16, body: &str) -> Result<String, String> {
         .ok_or_else(|| "The provider returned no answer.".to_string())
 }
 
+fn session_id() -> &'static str {
+    static ID: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    ID.get_or_init(|| {
+        let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
+        format!("mm-{}-{nanos:x}", std::process::id())
+    })
+}
+
 pub async fn chat_openai(req: &ChatRequest, key: &str) -> Result<String, String> {
     let model = req.model.as_deref().filter(|m| !m.is_empty()).ok_or("Choose a model for this provider.")?;
     let base = validate_base_url(req.base_url.as_deref().unwrap_or(DEFAULT_BASE_URL))?;
@@ -316,6 +324,10 @@ pub async fn chat_openai(req: &ChatRequest, key: &str) -> Result<String, String>
         .post(endpoint)
         .bearer_auth(key)
         .header("content-type", "application/json")
+        // OpenCode Go rejects calls without these (MissingSessionID); a stable
+        // session per app run also lets it cache the shared report prompt.
+        .header("user-agent", concat!("MoneyManagerDesktop/", env!("CARGO_PKG_VERSION")))
+        .header("x-opencode-session", session_id())
         .body(openai_body(req, model).to_string())
         .send()
         .await
