@@ -222,9 +222,31 @@ pub fn claude_command(bin: &Path, req: &ChatRequest, workdir: &Path) -> Command 
 }
 
 /// Read-only sandbox, nothing persisted; the final message is written to `out_file`.
-pub fn codex_command(bin: &Path, req: &ChatRequest, out_file: &Path, workdir: &Path) -> Command {
+/// A CODEX_HOME that holds only a link to the user's login, so the chat does not
+/// load their AGENTS.md, config, MCP servers (such as Engram), hooks or skills.
+pub fn private_codex_home(real: &Path, scratch: &Path) -> Result<PathBuf, String> {
+    let home = scratch.join("codex-home");
+    std::fs::create_dir_all(&home).map_err(|e| e.to_string())?;
+    let link = home.join("auth.json");
+    let target = real.join("auth.json");
+    if std::fs::read_link(&link).ok().as_deref() != Some(target.as_path()) {
+        let _ = std::fs::remove_file(&link);
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&target, &link).map_err(|e| e.to_string())?;
+        #[cfg(not(unix))]
+        std::fs::copy(&target, &link).map_err(|e| e.to_string())?;
+    }
+    Ok(home)
+}
+
+fn real_codex_home() -> Option<PathBuf> {
+    std::env::var_os("CODEX_HOME").map(PathBuf::from).or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".codex")))
+}
+
+pub fn codex_command(bin: &Path, req: &ChatRequest, out_file: &Path, workdir: &Path, codex_home: &Path) -> Command {
     let mut cmd = Command::new(bin);
-    cmd.args(["exec", "--ephemeral", "--skip-git-repo-check", "-s", "read-only", "--color", "never"]);
+    cmd.env("CODEX_HOME", codex_home);
+    cmd.args(["exec", "--ephemeral", "--skip-git-repo-check", "--ignore-user-config", "--ignore-rules", "-s", "read-only", "--color", "never"]);
     cmd.arg("-C").arg(workdir);
     cmd.arg("-o").arg(out_file);
     if let Some(m) = req.model.as_deref().filter(|m| !m.is_empty()) {
@@ -252,7 +274,9 @@ pub fn chat_cli(req: &ChatRequest, scratch: &Path) -> Result<String, String> {
             let out_file = scratch.join(format!("codex-{}-{n}.txt", std::process::id()));
             // Codex has no system prompt flag, so the instructions lead the prompt.
             let prompt = format!("{}\n\n---\n\n{}", req.system, transcript(&req.messages));
-            let result = run_cli(codex_command(&bin, req, &out_file, scratch), &prompt, CLI_TIMEOUT);
+            let real = real_codex_home().ok_or("Could not find the Codex settings folder.")?;
+            let home = private_codex_home(&real, scratch)?;
+            let result = run_cli(codex_command(&bin, req, &out_file, scratch, &home), &prompt, CLI_TIMEOUT);
             let file = std::fs::read_to_string(&out_file).ok();
             let _ = std::fs::remove_file(&out_file);
             match (result, file) {
@@ -434,9 +458,28 @@ mod tests {
     fn codex_runs_read_only_and_ephemeral() {
         let mut r = req(Provider::CodexCli, vec![msg("user", "hi")]);
         r.effort = Some("minimal".into());
-        let cmd = codex_command(Path::new("/bin/codex"), &r, Path::new("/tmp/o.txt"), Path::new("/tmp/w"));
+        let cmd = codex_command(Path::new("/bin/codex"), &r, Path::new("/tmp/o.txt"), Path::new("/tmp/w"), Path::new("/tmp/h"));
         let args: Vec<_> = cmd.get_args().map(|a| a.to_string_lossy().to_string()).collect();
-        assert_eq!(args, ["exec", "--ephemeral", "--skip-git-repo-check", "-s", "read-only", "--color", "never", "-C", "/tmp/w", "-o", "/tmp/o.txt", "-c", "model_reasoning_effort=minimal", "-"]);
+        assert_eq!(args, ["exec", "--ephemeral", "--skip-git-repo-check", "--ignore-user-config", "--ignore-rules", "-s", "read-only", "--color", "never", "-C", "/tmp/w", "-o", "/tmp/o.txt", "-c", "model_reasoning_effort=minimal", "-"]);
+        let env: Vec<_> = cmd.get_envs().collect();
+        assert_eq!(env, [(std::ffi::OsStr::new("CODEX_HOME"), Some(std::ffi::OsStr::new("/tmp/h")))]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn private_codex_home_shares_only_the_login() {
+        let dir = std::env::temp_dir().join(format!("mm-codex-home-{}", std::process::id()));
+        let real = dir.join("real");
+        std::fs::create_dir_all(&real).unwrap();
+        std::fs::write(real.join("auth.json"), "{}").unwrap();
+        std::fs::write(real.join("AGENTS.md"), "use engram").unwrap();
+        let home = private_codex_home(&real, &dir.join("scratch")).unwrap();
+        assert_eq!(std::fs::read_to_string(home.join("auth.json")).unwrap(), "{}");
+        assert!(!home.join("AGENTS.md").exists());
+        assert!(!home.join("config.toml").exists());
+        // Idempotent on the next call.
+        assert_eq!(private_codex_home(&real, &dir.join("scratch")).unwrap(), home);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[cfg(unix)]
