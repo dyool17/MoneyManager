@@ -84,41 +84,81 @@ export const useChat = defineStore('chat', () => {
     await refreshStatus()
   }
 
-  /** Returns whether the question was answered, so the view can keep the draft on failure. */
-  async function send(text: string): Promise<boolean> {
-    const content = text.trim()
-    if (!content || sending.value) return false
-    error.value = null
+  /** The selected provider is installed (or has its key and model), so AI controls can show. */
+  const ready = computed(() => {
+    const st = status.value
+    if (!available || !st) return false
+    const p = settings.value.provider
+    if (p === 'claude-cli') return !!st.claude
+    if (p === 'codex-cli') return !!st.codex
+    return st.hasKey && !!settings.value.models['openai-compatible']
+  })
+  /** Why the assistant cannot answer yet, in words for the user. */
+  const missing = computed(() => {
+    const st = status.value
+    if (!available) return 'The assistant runs in the desktop app. This browser preview cannot reach it.'
+    if (!st) return ''
+    const p = settings.value.provider
+    if (p === 'claude-cli' && !st.claude) return 'Claude Code was not found. Install it and run `claude` once to sign in.'
+    if (p === 'codex-cli' && !st.codex) return 'Codex CLI was not found. Install it and run `codex login` to sign in.'
+    if (p === 'openai-compatible' && !st.hasKey) return 'Add your API key in Settings.'
+    if (p === 'openai-compatible' && !settings.value.models['openai-compatible']) return 'Choose a model in Settings.'
+    return ''
+  })
+
+  async function ensureContext(): Promise<string | null> {
     if (history.state === 'idle') await history.fromSession(12)
-    if (!context.value) { error.value = 'Reports are not ready yet. Connect the phone or open a backup in Insights.'; return false }
-    messages.value = [...messages.value, { role: 'user', content }]
-    sending.value = true
+    return context.value || null
+  }
+
+  /**
+   * Runs one exchange with the provider, letting the assistant look up data
+   * between rounds. Returns the final answer and the lookups it used.
+   */
+  async function converse(transcript: AiMessage[], focus?: string | null, onLookup?: (what: string | null) => void) {
+    const s = settings.value
+    const where = focus ? `\n\nThe user is looking at: ${focus}. Answer about that first.` : ''
+    const system = `${systemPrompt(context.value)}\n\n${QUERY_GUIDE}${where}`
+    const lookups: string[] = []
+    const ask = () => aiChat({
+      provider: s.provider, system, messages: transcript,
+      model: s.models[s.provider] || undefined,
+      effort: s.efforts[s.provider] || undefined,
+      baseUrl: s.provider === 'openai-compatible' ? s.baseUrl : undefined,
+    })
+    let answer = await ask()
     try {
-      const s = settings.value
-      const system = `${systemPrompt(context.value)}\n\n${QUERY_GUIDE}`
-      const transcript: AiMessage[] = messages.value.map(({ role, content }) => ({ role, content }))
-      const lookups: string[] = []
-      const ask = () => aiChat({
-        provider: s.provider, system, messages: transcript,
-        model: s.models[s.provider] || undefined,
-        effort: s.efforts[s.provider] || undefined,
-        baseUrl: s.provider === 'openai-compatible' ? s.baseUrl : undefined,
-      })
-      let answer = await ask()
       for (let round = 0; round < MAX_ROUNDS; round++) {
         const queries = extractQueries(answer)
         if (!queries.length) break
-        lookingUp.value = queries.map(describe).join(', ')
+        onLookup?.(queries.map(describe).join(', '))
         lookups.push(...queries.map(describe))
         const results = await runAll(queries)
         transcript.push({ role: 'assistant', content: answer }, { role: 'user', content: `Query results (from the app, not the user):\n\n${results}${round === MAX_ROUNDS - 1 ? '\n\nNo more lookups: answer now with what you have.' : ''}` })
         answer = await ask()
       }
-      // A last answer that still only asks for data has nothing to show.
-      if (extractQueries(answer).length) {
-        const rest = answer.replace(/```(?:query|json)?[\s\S]*?```/g, '').trim()
-        answer = rest && !extractQueries(rest).length ? rest : 'I could not finish looking up the data. Try a narrower question.'
-      }
+    } finally {
+      onLookup?.(null)
+    }
+    // A last answer that still only asks for data has nothing to show.
+    if (extractQueries(answer).length) {
+      const rest = answer.replace(/```(?:query|json)?[\s\S]*?```/g, '').trim()
+      answer = rest && !extractQueries(rest).length ? rest : 'I could not finish looking up the data. Try a narrower question.'
+    }
+    return { answer, lookups }
+  }
+
+  /** Returns whether the question was answered, so the view can keep the draft on failure. */
+  async function send(text: string, focus?: string | null): Promise<boolean> {
+    const content = text.trim()
+    if (!content || sending.value) return false
+    error.value = null
+    if (!(await ensureContext())) { error.value = 'Reports are not ready yet. Connect the phone or open a backup in Analysis.'; return false }
+    messages.value = [...messages.value, { role: 'user', content }]
+    sending.value = true
+    try {
+      const transcript: AiMessage[] = messages.value.map(({ role, content }) => ({ role, content }))
+      const { answer, lookups } = await converse(transcript, focus, (w) => { lookingUp.value = w })
       messages.value = [...messages.value, { role: 'assistant', content: answer, ...(lookups.length ? { lookups } : {}) }]
       return true
     } catch (e) {
@@ -127,9 +167,19 @@ export const useChat = defineStore('chat', () => {
       messages.value = messages.value.slice(0, -1)
       return false
     } finally {
-      lookingUp.value = null
       sending.value = false
     }
+  }
+
+  /**
+   * A single answer outside the conversation, for briefs, explanations and
+   * suggestions. Throws when the assistant is not ready or the call fails.
+   */
+  async function oneShot(instruction: string, focus?: string | null): Promise<string> {
+    if (!ready.value) throw new Error(missing.value || 'The assistant is not set up.')
+    if (!(await ensureContext())) throw new Error('Reports are not ready yet.')
+    const { answer } = await converse([{ role: 'user', content: instruction }], focus)
+    return answer
   }
 
   function describe(q: Record<string, unknown>): string {
@@ -154,5 +204,5 @@ export const useChat = defineStore('chat', () => {
 
   const reset = () => { messages.value = []; error.value = null }
 
-  return { settings, status, messages, lookingUp, sending, error, available, context, refreshStatus, saveKey, send, reset }
+  return { settings, status, messages, lookingUp, sending, error, available, ready, missing, context, refreshStatus, saveKey, send, oneShot, reset }
 })

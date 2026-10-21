@@ -2,6 +2,9 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useSession } from '../stores/session'
 import { useOutbox } from '../stores/outbox'
+import { useHistory } from '../stores/history'
+import { useChat } from '../stores/chat'
+import { suggestCategory } from '../domain/suggest'
 import { formatDate, formatMoney } from '../domain/format'
 import { todayIso } from '../domain/period'
 import type { AssetItem, CardItem, Movement } from '../domain/types'
@@ -67,6 +70,46 @@ if (d.kind === 'transfer' && m?.type === 'transfer-in' && m.toAssetId) {
 
 const categories = computed(() => allCategories.value[form.kind])
 const subcategories = computed(() => categories.value.find((c) => c.id === form.categoryId)?.subcategories ?? [])
+// Category suggestions: first from the user's own history, then (if allowed) the assistant.
+const history = useHistory()
+const chat = useChat()
+const known = computed(() => {
+  const seen = new Set<string>()
+  return [...history.movements, ...session.movements].filter((x) => !seen.has(x.id) && seen.add(x.id))
+})
+const suggestion = computed(() => {
+  if (props.draft.kind !== 'transaction') return null
+  const s = suggestCategory(form.note, form.kind, known.value)
+  return s && (s.categoryId !== form.categoryId || (s.subcategoryId ?? '') !== form.subcategoryId) ? s : null
+})
+function useSuggestion() {
+  const s = suggestion.value
+  if (!s) return
+  form.categoryId = s.categoryId
+  form.subcategoryId = s.subcategoryId ?? ''
+  if (!isEdit.value && accounts.value.some((a) => a.id === s.assetId)) form.assetId = s.assetId
+}
+const aiSuggest = ref<{ state: 'idle' | 'asking' | 'none' | 'failed'; text?: string }>({ state: 'idle' })
+const canAskAi = computed(() => props.draft.kind === 'transaction' && chat.ready && chat.settings.includeDetails && form.note.trim().length >= 3 && !suggestion.value && !form.categoryId)
+async function askAiCategory() {
+  aiSuggest.value = { state: 'asking' }
+  const options = categories.value.map((c) => `- ${c.name}${c.subcategories.length ? `: ${c.subcategories.map((x) => x.name).join(', ')}` : ''}`).join('\n')
+  try {
+    const answer = await chat.oneShot(
+      `Pick the best category for a new ${form.kind} with the note "${form.note.replace(/"/g, "'")}". Choose only from this list (category: subcategories):\n${options}\n` +
+      'Reply with JSON only, no lookups: {"category":"<exact category name>","subcategory":"<exact subcategory name or empty>"}',
+    )
+    const json = JSON.parse(answer.slice(answer.indexOf('{'), answer.lastIndexOf('}') + 1)) as { category?: string; subcategory?: string }
+    const cat = categories.value.find((c) => c.name === json.category)
+    if (!cat) { aiSuggest.value = { state: 'none' }; return }
+    form.categoryId = cat.id
+    form.subcategoryId = cat.subcategories.find((x) => x.name === json.subcategory)?.id ?? ''
+    aiSuggest.value = { state: 'idle', text: `Filled in by the assistant: ${[cat.name, json.subcategory].filter(Boolean).join(' › ')}. Check it before saving.` }
+  } catch {
+    aiSuggest.value = { state: 'failed' }
+  }
+}
+
 const isEdit = computed(() =>
   (d.kind === 'transaction' || d.kind === 'transfer' || d.kind === 'asset' || d.kind === 'card') && !!d.initial,
 )
@@ -274,6 +317,18 @@ function close() {
           </select>
         </label>
         <label class="wide">Note <input id="f-note" v-model="form.note" maxlength="500" /></label>
+        <p v-if="suggestion" class="wide suggest" role="status">
+          <span>Suggested from your history: <b>{{ suggestion.label }}</b> <small>(used {{ suggestion.count }} {{ suggestion.count === 1 ? 'time' : 'times' }})</small></span>
+          <button type="button" @click="useSuggestion">Use it</button>
+        </p>
+        <p v-else-if="canAskAi || aiSuggest.state !== 'idle' || aiSuggest.text" class="wide suggest" role="status">
+          <span v-if="aiSuggest.state === 'asking'">Asking the assistant…</span>
+          <span v-else-if="aiSuggest.state === 'none'">The assistant found no matching category.</span>
+          <span v-else-if="aiSuggest.state === 'failed'">The assistant could not suggest a category.</span>
+          <span v-else-if="aiSuggest.text">{{ aiSuggest.text }}</span>
+          <span v-else>No earlier movement has this note.</span>
+          <button v-if="canAskAi && aiSuggest.state !== 'asking'" type="button" @click="askAiCategory">Ask the assistant</button>
+        </p>
         <label class="wide">Detail <input id="f-detail" v-model="form.detail" maxlength="500" /></label>
       </template>
 
@@ -366,6 +421,8 @@ dialog { width: min(34rem, calc(100vw - 2rem)); border: 1px solid var(--rule); b
 dialog::backdrop { background: rgb(0 0 0 / 0.45); }
 h2 { margin: 0 0 1rem; font-size: 1.25rem; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem; }
+.suggest { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem; margin: -0.3rem 0 0; padding: 0.5rem 0.7rem; border-radius: 9px; background: var(--accent-soft); color: var(--accent-ink); font-size: 0.85rem; }
+.suggest button { padding: 0.25rem 0.7rem; font-size: 0.82rem; }
 .wide, .seg { grid-column: 1 / -1; }
 label { display: grid; gap: 0.25rem; font-size: 0.85rem; color: var(--ink-soft); }
 .seg { display: flex; gap: 1.25rem; }

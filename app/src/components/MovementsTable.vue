@@ -5,6 +5,7 @@ import SortTh from './SortTh.vue'
 import { useSession } from '../stores/session'
 import { formatDate, formatMoney } from '../domain/format'
 import type { Movement, MovementType } from '../domain/types'
+import { filterMovements, type TypeFilter } from '../domain/spending'
 import { movementsCsv } from '../domain/export'
 import { exportCsv } from '../infrastructure/client'
 import ChangeDialog, { type Draft } from './ChangeDialog.vue'
@@ -13,11 +14,10 @@ const draft = ref<Draft | null>(null)
 const editRow = (m: Movement) =>
   (draft.value = m.type === 'transfer-in' || m.type === 'transfer-out' ? { kind: 'transfer', initial: m } : { kind: 'transaction', initial: m })
 
+/** Filters come from the Spending screen; the search box is local to the table. */
+const props = defineProps<{ category: string; account: string; type: TypeFilter }>()
 const session = useSession()
 const text = ref('')
-const type = ref<MovementType | ''>('')
-const account = ref('')
-const category = ref('')
 
 const TYPE_LABEL: Record<MovementType, string> = {
   income: 'Income',
@@ -27,21 +27,9 @@ const TYPE_LABEL: Record<MovementType, string> = {
   unknown: 'Other',
 }
 
-const categories = computed(() => {
-  const init = session.init
-  return init ? [...init.expenseCategories, ...init.incomeCategories] : []
-})
-
-const filtered = computed(() => {
-  const q = text.value.trim().toLowerCase()
-  return session.movements.filter(
-    (m) =>
-      (!type.value || m.type === type.value) &&
-      (!account.value || m.assetId === account.value || m.toAssetId === account.value) &&
-      (!category.value || m.categoryId === category.value) &&
-      (!q || `${m.content ?? ''} ${m.detail ?? ''}`.toLowerCase().includes(q)),
-  )
-})
+const filtered = computed(() =>
+  filterMovements(session.movements, { category: props.category, account: props.account, type: props.type, text: text.value }),
+)
 
 const recorded = computed(() => filtered.value.filter((m) => !m.isFuture))
 const upcoming = computed(() => filtered.value.filter((m) => m.isFuture))
@@ -72,25 +60,12 @@ const typeLabel = (m: Movement) => (m.type === 'unknown' ? `Other (code ${m.rawC
 </script>
 
 <template>
-  <section>
-    <div class="filters">
+  <section class="card">
+    <div class="head">
+      <h2>Movements</h2>
+      <span class="count muted">{{ filtered.length }} of {{ session.movements.length }}</span>
       <input v-model="text" type="search" placeholder="Search notes" aria-label="Search notes" />
-      <select v-model="type" aria-label="Type">
-        <option value="">All types</option>
-        <option v-for="(label, key) in TYPE_LABEL" :key="key" :value="key">{{ label }}</option>
-      </select>
-      <select v-model="account" aria-label="Account">
-        <option value="">All accounts</option>
-        <option v-for="a in session.init?.accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
-      </select>
-      <select v-model="category" aria-label="Category">
-        <option value="">All categories</option>
-        <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
-      </select>
-      <span class="count">{{ filtered.length }} of {{ session.movements.length }}</span>
       <button :disabled="!filtered.length || exportState.kind === 'saving'" @click="exportFiltered">Export CSV</button>
-      <button v-if="session.source === 'phone'" class="primary" @click="draft = { kind: 'transaction' }">Add transaction</button>
-      <button v-if="session.source === 'phone'" @click="draft = { kind: 'transfer' }">Add transfer</button>
     </div>
     <p v-if="exportState.kind === 'saved'" class="export ok" role="status">Saved {{ filtered.length }} transactions to <code>{{ exportState.text }}</code></p>
     <p v-else-if="exportState.kind === 'failed'" class="export warn" role="alert">Export failed: {{ exportState.text }}</p>
@@ -103,8 +78,8 @@ const typeLabel = (m: Movement) => (m.type === 'unknown' ? `Other (code ${m.rawC
       { title: 'Upcoming charges', rows: upcoming, sort: upcomingSort },
     ]" :key="group.title">
       <template v-if="group.rows.length">
-        <h2>{{ group.title }} <small v-if="group.title !== 'Recorded'">dated after today</small></h2>
-        <table>
+        <h3>{{ group.title }} <small v-if="group.title !== 'Recorded'">dated after today</small></h3>
+        <div class="scroll"><table>
           <thead>
             <tr>
               <SortTh :sort="group.sort" by="date">Date</SortTh><SortTh :sort="group.sort" by="note">Note</SortTh><SortTh :sort="group.sort" by="category">Category</SortTh><SortTh :sort="group.sort" by="account">Account</SortTh><SortTh :sort="group.sort" by="type">Type</SortTh><SortTh :sort="group.sort" by="amount" num>Amount</SortTh><th><span class="sr">Actions</span></th>
@@ -132,7 +107,7 @@ const typeLabel = (m: Movement) => (m.type === 'unknown' ? `Other (code ${m.rawC
               </td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
       </template>
     </template>
     <ChangeDialog v-if="draft" :draft="draft" @close="draft = null" />
@@ -144,25 +119,25 @@ const typeLabel = (m: Movement) => (m.type === 'unknown' ? `Other (code ${m.rawC
 .link { border: none; background: none; padding: 0 0.35rem; color: var(--accent); }
 .danger-link { color: var(--expense); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.filters { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1.25rem; }
-.filters input { flex: 1 1 14rem; }
-.export { margin: -0.5rem 0 1rem; font-size: 0.9rem; }
+.head { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; align-items: center; margin-bottom: 1rem; }
+.head h2 { margin: 0; font-size: 1.05rem; }
+.head input { flex: 1 1 14rem; margin-left: auto; max-width: 22rem; }
+.count { font-size: 0.85rem; }
+.export { margin: 0 0 1rem; font-size: 0.9rem; }
 .export code { word-break: break-all; }
 .ok { color: var(--income); }
 .warn { color: var(--warn-ink); }
-.count { margin-left: auto; color: var(--ink-soft); font-size: 0.85rem; }
-h2 { font-size: 1.05rem; margin: 1.5rem 0 0.5rem; }
-h2 small { font-weight: 400; color: var(--ink-soft); margin-left: 0.4rem; }
-table { width: 100%; border-collapse: collapse; background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
-th { text-align: left; font-weight: 500; font-size: 0.85rem; color: var(--ink-soft); padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--rule); }
-td { padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; }
+h3 small { font-weight: 400; color: var(--ink-soft); margin-left: 0.4rem; }
+.scroll { overflow-x: auto; }
+table { width: 100%; min-width: 42rem; border-collapse: collapse; }
+th { text-align: left; font-weight: 600; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--rule); }
+td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
 tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--hover); }
 td small { display: block; color: var(--ink-soft); font-size: 0.8rem; }
 .num { text-align: right; }
 .date { white-space: nowrap; color: var(--ink-soft); }
-.future td { background: color-mix(in srgb, var(--mist) 60%, transparent); }
+.future td { color: var(--ink-soft); }
 .empty { color: var(--ink-soft); }
-@media (max-width: 720px) {
-  table { display: block; overflow-x: auto; }
-}
 </style>
