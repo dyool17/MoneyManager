@@ -21,6 +21,13 @@ describe('AI context', () => {
     expect(text).toContain('- Spendable balance: 3000.00; emergency cushion: 40 months')
     expect(text).toContain('- Total debt: 200.00 (20% of monthly income)')
     expect(text).toContain('- Food: over in 1 of 1 months, average excess 20.00')
+    expect(text).toMatch(/projected month end [\d.]+ \(past months averaged 100\.00 spending; expected income 1000\.00, received so far 1000\.00\)/)
+  })
+
+  it('says when balances and debt are unknown instead of scoring them as facts', () => {
+    const text = buildContext({ ...base, liquid: null, debts: null, includeDetails: false })
+    expect(text).toContain('- Spendable balance and emergency cushion: unknown (no account balances in this data); the cushion part of the score counts it as 0, so do not call it a fact.')
+    expect(text).toContain('- Total debt: unknown; the debt part of the score assumes no debt, so do not call it a strength.')
   })
 
   it('keeps transaction descriptions out unless allowed', () => {
