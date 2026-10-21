@@ -72,8 +72,10 @@ const REPORTS = [
         <dd>Install the Codex CLI and run <code>codex login</code>. The app runs it read-only and without saving the session; usage counts against your ChatGPT plan.</dd>
         <dt>API key (OpenCode Go)</dt>
         <dd>Paste the key from your provider and choose a model. The default address is <code>https://opencode.ai/zen/go/v1</code>; any OpenAI-compatible service works. The key is stored on this computer, readable only by your user, and never shown again.</dd>
+        <dt>Looking up data</dt>
+        <dd>When the reports are not enough, the assistant can ask the app for specific data: movements filtered by category, account, dates or text, totals by month, category, account or weekday, and one day's detail. The app runs these read-only lookups on this computer, loads up to 24 months from the phone when needed, and shows which lookups were used under each answer. Nothing is ever changed.</dd>
         <dt>What is shared</dt>
-        <dd>Totals, categories, dates and the same figures Insights shows. Shop names and notes are sent only if you turn on "Share transaction descriptions". The conversation is not saved.</dd>
+        <dd>Totals, categories, dates and the same figures Insights shows. Shop names and notes, and searching by them, are sent only if you turn on "Share transaction descriptions". The conversation is not saved.</dd>
       </dl>
     </div>
 

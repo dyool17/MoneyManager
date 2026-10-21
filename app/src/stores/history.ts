@@ -76,5 +76,18 @@ export const useHistory = defineStore('history', () => {
     return load('backup', () => loadBackupHistory(file, last), first, last)
   }
 
-  return { movements, source, span, state, error, budgets, budgetState, fromSession, fromBackup }
+  /** Loads older months from the phone so a lookup can reach them; the report span stays the same. */
+  async function extend(from: string): Promise<string> {
+    const session = useSession()
+    const loaded = movements.value.reduce((min, m) => (m.date < min ? m.date : min), span.value.first)
+    if (source.value !== 'phone' || !loaded || from >= loaded) return loaded
+    const start = from.slice(0, 8) + '01'
+    const end = iso(new Date(new Date(`${loaded}T12:00:00`).getTime() - 86400000))
+    const older = await session.getHistory({ startDate: start, endDate: end })
+    const seen = new Set(movements.value.map((m) => m.id))
+    movements.value = [...older.filter((m) => !seen.has(m.id)), ...movements.value]
+    return start
+  }
+
+  return { movements, source, span, state, error, budgets, budgetState, fromSession, fromBackup, extend }
 })

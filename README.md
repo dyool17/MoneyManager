@@ -51,6 +51,8 @@ Conversa sobre tus reportes con tres tipos de proveedor:
 
 Las suscripciones se usan a través de sus CLIs oficiales porque Anthropic no permite usar el login de Claude en apps de terceros. Para usarlas, instala el CLI correspondiente e inicia sesión una vez (`claude` o `codex login`).
 
+Si los reportes no alcanzan, el asistente puede pedir datos puntuales con un menú fijo de consultas de solo lectura: movimientos por categoría, cuenta, fechas o texto; totales por mes, categoría, cuenta o día de la semana; y el detalle de un día. La app las ejecuta localmente (cargando del teléfono hasta 24 meses atrás si hace falta), con un máximo de 3 rondas y 50 filas por consulta, y muestra bajo cada respuesta qué consultó. Nunca modifica nada.
+
 Privacidad: el asistente recibe las mismas cifras agregadas que muestra Insights. Los nombres de comercios y notas se envían sólo si activas **Share transaction descriptions**. En **What is shared** ves el texto exacto que se envía. La conversación no se guarda. La API key se guarda en la carpeta de datos de la app con permisos `0600` y nunca vuelve a la interfaz.
 
 ## Seguridad de los datos

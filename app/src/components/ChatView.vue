@@ -138,10 +138,18 @@ onMounted(() => {
         </div>
       </div>
       <div v-for="(m, i) in chat.messages" :key="i" :class="['msg', m.role]">
-        <div v-if="m.role === 'assistant'" class="bubble md" v-html="renderMarkdown(m.content)" />
+        <div v-if="m.role === 'assistant'" class="answer">
+          <details v-if="m.lookups?.length" class="lookups">
+            <summary>Looked up {{ m.lookups.length }} {{ m.lookups.length === 1 ? 'query' : 'queries' }}</summary>
+            <ul><li v-for="(l, j) in m.lookups" :key="j">{{ l }}</li></ul>
+          </details>
+          <div class="bubble md" v-html="renderMarkdown(m.content)" />
+        </div>
         <div v-else class="bubble">{{ m.content }}</div>
       </div>
-      <div v-if="chat.sending" class="msg assistant"><div class="bubble typing"><i /><i /><i /></div></div>
+      <div v-if="chat.sending" class="msg assistant">
+        <div class="bubble typing"><i /><i /><i /><span v-if="chat.lookingUp" class="lookup-now">Looking up {{ chat.lookingUp }}</span></div>
+      </div>
     </div>
 
     <p v-if="chat.error" class="error" role="alert">{{ chat.error }}</p>
@@ -201,7 +209,13 @@ legend { font-weight: 600; margin-bottom: 0.4rem; }
 .md :deep(ul), .md :deep(ol) { margin: 0.2rem 0 0.6rem; padding-left: 1.2rem; }
 .md :deep(h4) { margin: 0.6rem 0 0.3rem; font-size: 0.95rem; }
 .md :deep(code) { background: var(--mist); padding: 0 0.3rem; border-radius: 4px; }
-.typing { display: inline-flex; gap: 4px; padding: 0.9rem 1rem; }
+.answer { display: grid; gap: 0.3rem; max-width: 82%; }
+.answer .bubble { max-width: 100%; }
+.lookups { font-size: 0.8rem; color: var(--ink-soft); }
+.lookups summary { cursor: pointer; width: fit-content; }
+.lookups ul { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+.lookup-now { margin-left: 0.5rem; font-size: 0.8rem; color: var(--ink-soft); align-self: center; }
+.typing { display: inline-flex; align-items: center; gap: 4px; padding: 0.9rem 1rem; }
 .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-soft); animation: blink 1.2s infinite ease-in-out; }
 .typing i:nth-child(2) { animation-delay: 0.15s; } .typing i:nth-child(3) { animation-delay: 0.3s; }
 .composer { display: flex; gap: 0.6rem; align-items: flex-end; }
