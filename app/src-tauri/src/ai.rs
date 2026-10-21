@@ -115,13 +115,28 @@ pub fn transcript(messages: &[ChatMessage]) -> String {
 pub fn find_binary(name: &str, path_var: Option<&str>, home: Option<&Path>) -> Option<PathBuf> {
     let mut dirs: Vec<PathBuf> = path_var.map(|p| std::env::split_paths(p).collect()).unwrap_or_default();
     if let Some(h) = home {
-        for d in [".local/bin", ".local/share/mise/shims", ".npm-global/bin", ".bun/bin", ".volta/bin"] {
+        for d in [".local/bin", ".local/share/mise/shims", ".npm-global/bin", ".bun/bin", ".volta/bin", "AppData/Roaming/npm", "scoop/shims"] {
             dirs.push(h.join(d));
         }
     }
     dirs.push(PathBuf::from("/usr/local/bin"));
     dirs.push(PathBuf::from("/usr/bin"));
-    dirs.into_iter().map(|d| d.join(name)).find(|p| is_executable(p))
+    let names = executable_names(name);
+    dirs.into_iter().flat_map(|d| names.iter().map(move |n| d.join(n))).find(|p| is_executable(p))
+}
+
+/// Windows CLIs installed through npm are `.cmd` shims; native installers ship `.exe`.
+fn executable_names(name: &str) -> Vec<String> {
+    if cfg!(windows) {
+        vec![format!("{name}.exe"), format!("{name}.cmd"), format!("{name}.bat")]
+    } else {
+        vec![name.to_owned()]
+    }
+}
+
+/// Windows has no HOME; the profile folder plays that role.
+fn home_dir() -> Option<PathBuf> {
+    std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")).map(PathBuf::from)
 }
 
 fn is_executable(p: &Path) -> bool {
@@ -137,8 +152,7 @@ fn is_executable(p: &Path) -> bool {
 }
 
 fn locate(name: &str) -> Option<PathBuf> {
-    let home = std::env::var_os("HOME").map(PathBuf::from);
-    find_binary(name, std::env::var("PATH").ok().as_deref(), home.as_deref())
+    find_binary(name, std::env::var("PATH").ok().as_deref(), home_dir().as_deref())
 }
 
 pub fn status(key_file: &Path) -> AiStatus {
@@ -152,6 +166,12 @@ pub fn status(key_file: &Path) -> AiStatus {
 /// Runs a CLI with the prompt on stdin and a time limit; stderr becomes the error text.
 pub fn run_cli(mut cmd: Command, stdin: &str, timeout: Duration) -> Result<String, String> {
     cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    #[cfg(windows)]
+    {
+        // CREATE_NO_WINDOW: a GUI app would otherwise flash a console per question.
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000);
+    }
     let mut child = cmd.spawn().map_err(|e| format!("Could not start the assistant: {e}"))?;
     let mut input = child.stdin.take().ok_or("No stdin")?;
     let text = stdin.to_owned();
@@ -240,7 +260,7 @@ pub fn private_codex_home(real: &Path, scratch: &Path) -> Result<PathBuf, String
 }
 
 fn real_codex_home() -> Option<PathBuf> {
-    std::env::var_os("CODEX_HOME").map(PathBuf::from).or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".codex")))
+    std::env::var_os("CODEX_HOME").map(PathBuf::from).or_else(|| home_dir().map(|h| h.join(".codex")))
 }
 
 pub fn codex_command(bin: &Path, req: &ChatRequest, out_file: &Path, workdir: &Path, codex_home: &Path) -> Command {
@@ -508,6 +528,21 @@ mod tests {
         std::fs::set_permissions(&tool, std::fs::Permissions::from_mode(0o755)).unwrap();
         assert_eq!(find_binary("claude", Some("/nonexistent"), Some(&home)), Some(tool));
         assert_eq!(find_binary("mm-no-such-tool", Some("/nonexistent"), Some(&home)), None);
+        let _ = std::fs::remove_dir_all(home);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn finds_npm_cmd_shims_in_the_windows_profile() {
+        let home = scratch("winhome");
+        let npm = home.join("AppData/Roaming/npm");
+        std::fs::create_dir_all(&npm).unwrap();
+        let tool = npm.join("claude.cmd");
+        std::fs::write(&tool, "@echo off\r\n").unwrap();
+        // An extensionless file is not runnable on Windows and must be skipped.
+        std::fs::write(npm.join("codex"), "#!/bin/sh\n").unwrap();
+        assert_eq!(find_binary("claude", Some(r"C:\nonexistent"), Some(&home)), Some(tool));
+        assert_eq!(find_binary("codex", Some(r"C:\nonexistent"), Some(&home)), None);
         let _ = std::fs::remove_dir_all(home);
     }
 

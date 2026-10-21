@@ -48,7 +48,16 @@ Los backups no se borran al desinstalar. Están en `~/.local/share/com.dyool.mon
 
 ## Windows
 
-Pendiente (fase 4). Se generará un instalador `.msi` con `pnpm tauri build` en una máquina Windows.
+Para Windows 11 x64. Windows 11 ya trae WebView2, el único requisito.
+
+1. Descarga `MoneyManager_<versión>_x64-setup.exe` desde [Releases](https://github.com/dyool17/MoneyManager/releases).
+2. Ábrelo. El instalador no está firmado, así que SmartScreen muestra «Windows protegió su PC»: pulsa **Más información → Ejecutar de todas formas**.
+3. La instalación es por usuario y no pide permisos de administrador. La app queda en el menú Inicio como **Money Manager**.
+Los datos de la app (backups, `writes.log`, la API key del asistente) se guardan en `%APPDATA%\com.dyool.moneymanager\`. Para desinstalar usa **Configuración → Aplicaciones**; los backups no se borran.
+
+Para usar los asistentes por suscripción instala el CLI con npm (`npm install -g @anthropic-ai/claude-code` o `npm install -g @openai/codex`) e inicia sesión una vez. La app los busca en el `PATH` y en `%APPDATA%\npm`.
+
+El instalador se compila en GitHub Actions (`.github/workflows/windows-release.yml`) al publicar una release. Para compilarlo en una máquina Windows: `cd app && pnpm install && pnpm tauri build --bundles nsis`. No se genera `.msi` porque WiX no acepta versiones beta como `0.1.0-beta.2`.
 
 ## Primer uso
 
