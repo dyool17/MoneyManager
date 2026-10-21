@@ -73,7 +73,7 @@ const linkedName = computed(() => session.assets.flatMap((g) => g.items).find((i
     </dl>
 
     <div class="acts">
-      <button class="primary" @click="nav.go('spending')">See transactions</button>
+      <button class="primary" @click="nav.go('spending', `account:${account.id}`)">See transactions</button>
       <button @click="nav.go('settings', 'accounts')">Account settings</button>
       <AiButton :question="`Tell me about my ${account.name} account`" :about="`${account.name} account`">Ask about this account</AiButton>
     </div>

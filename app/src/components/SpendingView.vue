@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { useSession } from '../stores/session'
+import { useNav } from '../stores/nav'
 import { formatMoney } from '../domain/format'
 import { buildBudgetReport } from '../domain/budget'
 import { todayIso } from '../domain/period'
@@ -19,7 +20,10 @@ import AiButton from './AiButton.vue'
 import Icon from './Icon.vue'
 
 const session = useSession()
-const filters = reactive<{ category: string; account: string; type: TypeFilter }>({ category: '', account: '', type: '' })
+// Another screen can open Spending filtered to one account ("account:<id>").
+const nav = useNav()
+const preset = nav.section?.startsWith('account:') ? nav.section.slice('account:'.length) : ''
+const filters = reactive<{ category: string; account: string; type: TypeFilter }>({ category: '', account: preset, type: '' })
 const draft = ref<Draft | null>(null)
 
 const TYPES: Record<Exclude<TypeFilter, ''>, string> = { expense: 'Expense', income: 'Income', transfer: 'Transfer' }

@@ -18,13 +18,13 @@ Objective: implement the approved rework prototype (https://claude.ai/artifact/W
 
 | ID | Specs | Route | Status | Commit |
 |---|---|---|---|---|
-| T1 | S2, S3, S8 (Ask panel) | inline | pending | |
-| T2 | S4 | inline | pending | |
-| T3 | S5 | delegated (parallel with T4, T5) | pending | |
-| T4 | S6 | delegated (parallel) | pending | |
-| T5 | S7 | delegated (parallel) | pending | |
-| T6 | S8 | inline | pending | |
-| T7 | S2 (Settings), S9 | inline | pending | |
+| T1 | S2, S3, S8 (Ask panel) | inline | done | fe441b9 |
+| T2 | S4 | inline | done | c510cb3 |
+| T3 | S5 | delegated (parallel with T4, T5) | done | bcc47f4 (+ card-sign fix in the next commit) |
+| T4 | S6 | delegated (parallel) | done | 9923990 |
+| T5 | S7 | delegated (parallel) | done | 5d4a1bc |
+| T6 | S8 | inline | done | 459c97b |
+| T7 | S2 (Settings), S9 | inline | done | 5db7b84 |
 
 Route evidence: T3-T5 are independent screens with disjoint new files, each several hundred lines → Writer trigger (a), Sonnet medium per the user's cost constraint ("si metes opus a todo me quemas la cuenta").
 
@@ -32,3 +32,6 @@ Route evidence: T3-T5 are independent screens with disjoint new files, each seve
 
 - L1 (2026-10-21): "no me gusta la UI, piensa en un rework completo. investiga o usa tools no se. pero mejora la integra la IA en más partes no solo el chat. propon ideas"
 - L2: prototype approved: "ok implementalo".
+- L3: T1 shell, T2 Today inline; T3-T5 by three parallel Sonnet writers (disjoint surfaces), each passed vue-tsc + tests; parent visual check in light/dark with a mocked assistant. Fixes: cards always count as debt on Money (demo reports card debt positive; the metadata totals still add a positive card as an asset — pre-existing, left for a phone check), filter pill borders, empty-month report headline.
+- L4: Risk items: 5 (new dependency: @fontsource-variable/inter and space-grotesk, bundled locally because the CSP blocks Google Fonts). Independent verifier launched at feature end.
+- Pending: live phone check of card sign and history extension; AI features only exercised with a mocked provider in the browser.
