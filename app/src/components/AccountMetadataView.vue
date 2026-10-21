@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import { useSort } from '../composables/sort'
+import SortTh from './SortTh.vue'
 import { useAccountMetadata } from '../stores/metadata'
 import { loadNativeMetadata } from '../infrastructure/native-metadata'
 import { formatMoney } from '../domain/format'
@@ -40,6 +42,8 @@ function save(reset = false) {
     selected.value = ''
   } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
 }
+const include = (id: string) => { const x = metadata.settingsFor(id); return x ? (x.includeInTotals ? 'Yes' : 'No') : 'Pending' }
+const metaSort = useSort(() => metadata.rows, { name: (r) => r.name, include: (r) => include(r.id), currency: (r) => metadata.settingsFor(r.id)?.currency ?? null, rate: (r) => metadata.settingsFor(r.id)?.rate ?? null, source: (r) => metadata.sourceOf(r.id) })
 </script>
 
 <template>
@@ -62,8 +66,8 @@ function save(reset = false) {
     <p v-if="!metadata.rows.length">Connect the phone to load accounts first.</p>
     <div v-else class="table-scroll">
       <table>
-        <thead><tr><th>Account</th><th>Include in totals</th><th>Currency</th><th>Rate to {{ metadata.state.baseCurrency || 'base' }}</th><th>Source</th><th></th></tr></thead>
-        <tbody><tr v-for="row in metadata.rows" :key="row.id">
+        <thead><tr><SortTh :sort="metaSort" by="name">Account</SortTh><SortTh :sort="metaSort" by="include">Include in totals</SortTh><SortTh :sort="metaSort" by="currency">Currency</SortTh><SortTh :sort="metaSort" by="rate" num>Rate to {{ metadata.state.baseCurrency || 'base' }}</SortTh><SortTh :sort="metaSort" by="source">Source</SortTh><th></th></tr></thead>
+        <tbody><tr v-for="row in metaSort.sorted.value" :key="row.id">
           <th scope="row">{{ row.name }}</th>
           <td>{{ metadata.settingsFor(row.id) ? metadata.settingsFor(row.id)!.includeInTotals ? 'Yes' : 'No' : 'Pending' }}</td>
           <td>{{ metadata.settingsFor(row.id)?.currency ?? '—' }}</td>

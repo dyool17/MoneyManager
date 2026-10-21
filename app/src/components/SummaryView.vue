@@ -2,6 +2,8 @@
 import { computed } from 'vue'
 import { useSession } from '../stores/session'
 import { formatMoney } from '../domain/format'
+import { useSort } from '../composables/sort'
+import SortTh from './SortTh.vue'
 import { useCountUp } from '../composables/countUp'
 
 const session = useSession()
@@ -12,6 +14,10 @@ const netShown = useCountUp(computed(() => s.value?.net))
 const scale = computed(() => Math.max(s.value?.income ?? 0, s.value?.expense ?? 0, 1))
 const pct = (n: number) => `${Math.min(100, (n / scale.value) * 100)}%`
 const budgetPct = (total: number, budget: number) => (budget > 0 ? Math.round((total / budget) * 100) : null)
+type Row = { name: string; total: number; budget: number }
+const columns = { name: (r: Row) => r.name, total: (r: Row) => r.total, budget: (r: Row) => budgetPct(r.total, r.budget) }
+const expenseSort = useSort(() => s.value?.expenseByCategory ?? [], columns)
+const incomeSort = useSort(() => s.value?.incomeByCategory ?? [], columns)
 </script>
 
 <template>
@@ -38,13 +44,18 @@ const budgetPct = (total: number, budget: number) => (budget > 0 ? Math.round((t
 
     <div class="columns">
       <div v-for="group in [
-        { title: 'Spending by category', rows: s.expenseByCategory, cls: 'expense' },
-        { title: 'Income by category', rows: s.incomeByCategory, cls: 'income' },
+        { title: 'Spending by category', rows: s.expenseByCategory, sort: expenseSort, cls: 'expense' },
+        { title: 'Income by category', rows: s.incomeByCategory, sort: incomeSort, cls: 'income' },
       ]" :key="group.title">
         <h2>{{ group.title }}</h2>
         <p v-if="!group.rows.length" class="empty">Nothing recorded this month.</p>
         <table v-else>
-          <tr v-for="row in group.rows" :key="row.name">
+          <thead><tr>
+            <SortTh :sort="group.sort" by="name">Category</SortTh>
+            <SortTh :sort="group.sort" by="total" num>Total</SortTh>
+            <SortTh :sort="group.sort" by="budget">Budget</SortTh>
+          </tr></thead>
+          <tr v-for="row in group.sort.sorted.value" :key="row.name">
             <th scope="row">{{ row.name }}</th>
             <td :class="['amount', group.cls]">{{ formatMoney(row.total) }}</td>
             <td class="budget">

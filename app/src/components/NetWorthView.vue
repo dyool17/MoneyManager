@@ -5,6 +5,8 @@ import { formatMoney } from '../domain/format'
 import LineChart from './LineChart.vue'
 import { useAccountMetadata } from '../stores/metadata'
 import { useCountUp } from '../composables/countUp'
+import { useSort } from '../composables/sort'
+import SortTh from './SortTh.vue'
 
 defineEmits<{ configure: [] }>()
 const metadata = useAccountMetadata()
@@ -21,6 +23,10 @@ function stack(shares: { name: string; amount: number }[]) {
 const netShown = useCountUp(computed(() => current.value?.netWorth))
 const assetStack = computed(() => stack(current.value?.assetShares ?? []))
 const debtStack = computed(() => stack(current.value?.debtShares ?? []))
+type Row = { name: string; pct: number; amount: number }
+const columns = { name: (r: Row) => r.name, pct: (r: Row) => r.pct, amount: (r: Row) => Math.abs(r.amount) }
+const assetSort = useSort(assetStack, columns)
+const debtSort = useSort(debtStack, columns)
 </script>
 
 <template>
@@ -57,8 +63,8 @@ const debtStack = computed(() => stack(current.value?.debtShares ?? []))
 
     <div class="split">
       <div v-for="group in [
-        { title: 'Where your money is', rows: assetStack, cls: 'income' },
-        { title: 'What you owe', rows: debtStack, cls: 'expense' },
+        { title: 'Where your money is', rows: assetStack, sort: assetSort, cls: 'income' },
+        { title: 'What you owe', rows: debtStack, sort: debtSort, cls: 'expense' },
       ]" :key="group.title" class="card">
         <h2>{{ group.title }}</h2>
         <p v-if="!group.rows.length" class="muted">Nothing here.</p>
@@ -67,7 +73,12 @@ const debtStack = computed(() => stack(current.value?.debtShares ?? []))
             <span v-for="(r, i) in group.rows" :key="r.name" :style="{ width: `${r.pct}%`, opacity: 1 - i * 0.22 }" :title="r.name" />
           </div>
           <table>
-            <tr v-for="r in group.rows" :key="r.name">
+            <thead><tr>
+              <SortTh :sort="group.sort" by="name">Account</SortTh>
+              <SortTh :sort="group.sort" by="pct" num>Share</SortTh>
+              <SortTh :sort="group.sort" by="amount" num>Total</SortTh>
+            </tr></thead>
+            <tr v-for="r in group.sort.sorted.value" :key="r.name">
               <th scope="row">{{ r.name }}</th>
               <td class="muted">{{ Math.round(r.pct) }}%</td>
               <td :class="['amount', group.cls]">{{ formatMoney(r.amount) }}</td>

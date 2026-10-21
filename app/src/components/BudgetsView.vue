@@ -4,11 +4,14 @@ import { useSession } from '../stores/session'
 import { formatMoney } from '../domain/format'
 import { buildBudgetReport } from '../domain/budget'
 import { todayIso } from '../domain/period'
+import { useSort } from '../composables/sort'
+import SortTh from './SortTh.vue'
 
 const session = useSession()
 const report = computed(() =>
   session.summary ? buildBudgetReport(session.summary.expenseByCategory, session.period, todayIso()) : null,
 )
+const unbudgeted = useSort(() => report.value?.unbudgeted ?? [], { name: (c) => c.name, total: (c) => c.total })
 const STATE_LABEL = { ok: 'On track', ahead: 'Spending fast', over: 'Over budget' }
 const width = (ratio: number) => `${Math.min(100, ratio * 100)}%`
 </script>
@@ -57,7 +60,8 @@ const width = (ratio: number) => `${Math.min(100, ratio * 100)}%`
     <template v-if="report.unbudgeted.length">
       <h2>Without a budget</h2>
       <table>
-        <tr v-for="c in report.unbudgeted" :key="c.name">
+        <thead><tr><SortTh :sort="unbudgeted" by="name">Category</SortTh><SortTh :sort="unbudgeted" by="total" num>Spent</SortTh></tr></thead>
+        <tr v-for="c in unbudgeted.sorted.value" :key="c.name">
           <th scope="row">{{ c.name }}</th>
           <td class="amount expense">{{ formatMoney(c.total) }}</td>
         </tr>

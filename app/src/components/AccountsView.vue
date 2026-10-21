@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef, watch } from 'vue'
+import { useSort } from '../composables/sort'
+import SortTh from './SortTh.vue'
 import { useSession } from '../stores/session'
 import { formatDate, formatMoney } from '../domain/format'
 import type { MonthPoint } from '../domain/types'
@@ -40,6 +42,7 @@ watch(
   },
   { immediate: true },
 )
+const movementSort = useSort(() => accountMovements.value, { date: (m) => m.date, note: (m) => m.content ?? m.categoryName ?? '', amount: (m) => m.amount })
 </script>
 
 <template>
@@ -92,7 +95,8 @@ watch(
         <h3>This month in {{ selectedItem.name }}</h3>
         <p v-if="!accountMovements.length" class="muted">No transactions in the selected month.</p>
         <table v-else>
-          <tr v-for="m in accountMovements" :key="m.id">
+          <thead><tr><SortTh :sort="movementSort" by="date">Date</SortTh><SortTh :sort="movementSort" by="note">Note</SortTh><SortTh :sort="movementSort" by="amount" num>Amount</SortTh></tr></thead>
+          <tr v-for="m in movementSort.sorted.value" :key="m.id">
             <td class="muted date">{{ formatDate(m.date) }}</td>
             <td>{{ m.content ?? m.categoryName ?? '—' }}</td>
             <td :class="['amount', m.type]">{{ formatMoney(m.amount) }}</td>

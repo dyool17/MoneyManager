@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useSort } from '../composables/sort'
+import SortTh from './SortTh.vue'
 import { useSession } from '../stores/session'
 import { formatDate, formatMoney } from '../domain/format'
 import type { Movement, MovementType } from '../domain/types'
@@ -44,6 +46,16 @@ const filtered = computed(() => {
 const recorded = computed(() => filtered.value.filter((m) => !m.isFuture))
 const upcoming = computed(() => filtered.value.filter((m) => m.isFuture))
 
+const movementColumns = {
+  date: (m: Movement) => m.date,
+  note: (m: Movement) => m.content ?? null,
+  category: (m: Movement) => [m.categoryName, m.subcategoryName].filter(Boolean).join(' '),
+  account: (m: Movement) => m.accountName ?? null,
+  type: (m: Movement) => typeLabel(m),
+  amount: (m: Movement) => m.amount,
+}
+const recordedSort = useSort(recorded, movementColumns)
+const upcomingSort = useSort(upcoming, movementColumns)
 const exportState = ref<{ kind: 'idle' | 'saving' | 'saved' | 'failed'; text?: string }>({ kind: 'idle' })
 async function exportFiltered() {
   exportState.value = { kind: 'saving' }
@@ -87,19 +99,19 @@ const typeLabel = (m: Movement) => (m.type === 'unknown' ? `Other (code ${m.rawC
     <p v-else-if="!filtered.length" class="empty">No transactions match these filters.</p>
 
     <template v-for="group in [
-      { title: 'Recorded', rows: recorded },
-      { title: 'Upcoming charges', rows: upcoming },
+      { title: 'Recorded', rows: recorded, sort: recordedSort },
+      { title: 'Upcoming charges', rows: upcoming, sort: upcomingSort },
     ]" :key="group.title">
       <template v-if="group.rows.length">
         <h2>{{ group.title }} <small v-if="group.title !== 'Recorded'">dated after today</small></h2>
         <table>
           <thead>
             <tr>
-              <th>Date</th><th>Note</th><th>Category</th><th>Account</th><th>Type</th><th class="num">Amount</th><th><span class="sr">Actions</span></th>
+              <SortTh :sort="group.sort" by="date">Date</SortTh><SortTh :sort="group.sort" by="note">Note</SortTh><SortTh :sort="group.sort" by="category">Category</SortTh><SortTh :sort="group.sort" by="account">Account</SortTh><SortTh :sort="group.sort" by="type">Type</SortTh><SortTh :sort="group.sort" by="amount" num>Amount</SortTh><th><span class="sr">Actions</span></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="m in group.rows" :key="m.id" :class="{ future: m.isFuture }">
+            <tr v-for="m in group.sort.sorted.value" :key="m.id" :class="{ future: m.isFuture }">
               <td class="date">{{ formatDate(m.date) }}</td>
               <td>
                 {{ m.content ?? '—' }}

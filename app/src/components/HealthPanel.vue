@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useSort } from '../composables/sort'
+import SortTh from './SortTh.vue'
 import { useSession } from '../stores/session'
 import { useAccountMetadata } from '../stores/metadata'
 import { useHistory } from '../stores/history'
@@ -69,6 +71,8 @@ function repeatingShare(name: string, total: number) {
 watch(candidates, (c) => { if (!chosen.value.length || !chosen.value.every((n) => c.some((x) => x.name === n))) chosen.value = c.filter((x) => repeatingShare(x.name, x.total) < 0.5).slice(0, 3).map((x) => x.name) }, { immediate: true })
 const percent = ref(15)
 const saving = computed(() => simulateCut(monthlyByCategory.value, chosen.value, percent.value))
+const budgetSort = useSort(() => budgetRecord.value.records, { name: (b) => b.name, over: (b) => b.over, excess: (b) => b.averageOver, worst: (b) => b.worst?.total ?? null })
+const oddSort = useSort(() => odd.value, { name: (o) => o.movement.content || o.movement.subcategoryName || o.movement.categoryName, times: (o) => o.times, amount: (o) => o.movement.amount, date: (o) => o.movement.date })
 </script>
 
 <template>
@@ -186,8 +190,8 @@ const saving = computed(() => simulateCut(monthlyByCategory.value, chosen.value,
       <p v-else-if="history.budgetState === 'failed'" class="muted">Could not read past budgets. The other reports are not affected.</p>
       <p v-else-if="!budgetRecord.records.length" class="muted">No budgets set in these months.</p>
       <table v-else>
-        <tr><th scope="col">Category</th><th scope="col">Months over</th><th scope="col">Average excess</th><th scope="col">Worst month</th></tr>
-        <tr v-for="b in budgetRecord.records" :key="b.name">
+        <thead><tr><SortTh :sort="budgetSort" by="name">Category</SortTh><SortTh :sort="budgetSort" by="over">Months over</SortTh><SortTh :sort="budgetSort" by="excess" num>Average excess</SortTh><SortTh :sort="budgetSort" by="worst">Worst month</SortTh></tr></thead>
+        <tr v-for="b in budgetSort.sorted.value" :key="b.name">
           <th scope="row">{{ b.name }}</th>
           <td>
             <span class="dots" :aria-label="`${b.over} of ${b.months}`"><i v-for="i in b.months" :key="i" :class="{ over: i <= b.over }" /></span>
@@ -205,7 +209,8 @@ const saving = computed(() => simulateCut(monthlyByCategory.value, chosen.value,
         <p class="muted small">More than two standard deviations above what that category usually costs.</p>
         <p v-if="!odd.length" class="muted">Nothing unusual.</p>
         <table v-else>
-          <tr v-for="o in odd" :key="o.movement.id">
+          <thead><tr><SortTh :sort="oddSort" by="name">Expense</SortTh><SortTh :sort="oddSort" by="times" num>vs typical</SortTh><SortTh :sort="oddSort" by="amount" num>Amount</SortTh></tr></thead>
+          <tr v-for="o in oddSort.sorted.value" :key="o.movement.id">
             <th scope="row">{{ o.movement.content || o.movement.subcategoryName || o.movement.categoryName }}<small>{{ formatDate(o.movement.date) }} · {{ o.movement.subcategoryName || o.movement.categoryName }}</small></th>
             <td class="muted">{{ o.times }}× typical</td>
             <td class="amount expense">{{ formatMoney(o.movement.amount) }}</td>

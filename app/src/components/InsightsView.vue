@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useSort } from '../composables/sort'
+import SortTh from './SortTh.vue'
 import { useHistory } from '../stores/history'
 import { useSession } from '../stores/session'
 import { analyze, categoryShares } from '../domain/insights'
@@ -69,6 +71,7 @@ async function onFile(e: Event) {
   if (fileInput.value) fileInput.value.value = ''
 }
 onMounted(() => { if (history.state === 'idle') loadFromSession() })
+const recurringSort = useSort(() => r.value?.recurring ?? [], { label: (c) => c.label, months: (c) => c.months, amount: (c) => c.amount })
 </script>
 
 <template>
@@ -175,7 +178,8 @@ onMounted(() => { if (history.state === 'idle') loadFromSession() })
           <details v-if="r.recurring.length" class="recurring">
             <summary>See the {{ r.recurring.length }} repeating charges</summary>
             <table>
-              <tr v-for="c in r.recurring" :key="c.label + c.amount">
+              <thead><tr><SortTh :sort="recurringSort" by="label">Charge</SortTh><SortTh :sort="recurringSort" by="months" num>Months</SortTh><SortTh :sort="recurringSort" by="amount" num>Amount</SortTh></tr></thead>
+              <tr v-for="c in recurringSort.sorted.value" :key="c.label + c.amount">
                 <th scope="row">{{ c.label }} <small>{{ c.category }}</small></th>
                 <td>{{ c.months }} months</td>
                 <td class="amount">{{ formatMoney(c.amount) }}</td>
