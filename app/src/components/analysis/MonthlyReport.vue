@@ -24,6 +24,7 @@ const rank = computed(() => {
 const headline = computed(() => {
   const m = month.value
   if (!m) return ''
+  if (!m.income && !m.expense) return `No movements were recorded in ${name.value}.`
   const place = rank.value === 1 ? 'the worst month in this period' : rank.value === 2 ? 'the second worst month in this period' : rank.value === closed.value.length ? 'the best month in this period' : ''
   return m.net < 0
     ? `${name.value} closed ${formatMoney(-m.net)} in the red${place ? `, ${place}` : ''}.`
