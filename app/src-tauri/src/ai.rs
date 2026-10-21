@@ -12,6 +12,8 @@ use std::time::{Duration, Instant};
 
 const CLI_TIMEOUT: Duration = Duration::from_secs(240);
 const MAX_PROMPT_BYTES: usize = 400 * 1024;
+/// Claude takes the system prompt as one argument; Linux caps a single argument at 128 KiB.
+const MAX_SYSTEM_BYTES: usize = 100 * 1024;
 pub const DEFAULT_BASE_URL: &str = "https://opencode.ai/zen/go/v1";
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
@@ -50,6 +52,7 @@ pub struct AiStatus {
 pub fn valid_model(model: &str) -> bool {
     !model.is_empty()
         && model.len() <= 100
+        && !model.starts_with('-')
         && model.chars().all(|c| c.is_ascii_alphanumeric() || "._:/-".contains(c))
 }
 
@@ -59,6 +62,9 @@ pub fn validate(req: &ChatRequest) -> Result<(), String> {
     }
     if req.messages.iter().any(|m| m.role != "user" && m.role != "assistant") {
         return Err("Unknown message role.".into());
+    }
+    if req.system.len() > MAX_SYSTEM_BYTES {
+        return Err("The reports are too large to send. Choose a shorter range.".into());
     }
     let size = req.system.len() + req.messages.iter().map(|m| m.content.len()).sum::<usize>();
     if size > MAX_PROMPT_BYTES {
@@ -181,8 +187,10 @@ pub fn cli_error(stderr: &str, fallback: &str) -> String {
 }
 
 /// No tools, no session files, no MCP servers, no user settings: a plain answer only.
-pub fn claude_command(bin: &Path, req: &ChatRequest) -> Command {
+/// Runs in `workdir` so no project CLAUDE.md or settings near the app are picked up.
+pub fn claude_command(bin: &Path, req: &ChatRequest, workdir: &Path) -> Command {
     let mut cmd = Command::new(bin);
+    cmd.current_dir(workdir);
     cmd.args(["-p", "--output-format", "text", "--tools", "", "--no-session-persistence", "--strict-mcp-config", "--setting-sources", ""]);
     cmd.args(["--system-prompt", &req.system]);
     if let Some(m) = req.model.as_deref().filter(|m| !m.is_empty()) {
@@ -208,12 +216,15 @@ pub fn chat_cli(req: &ChatRequest, scratch: &Path) -> Result<String, String> {
     match req.provider {
         Provider::ClaudeCli => {
             let bin = locate("claude").ok_or("Claude Code is not installed. Install it and run `claude` once to sign in.")?;
-            run_cli(claude_command(&bin, req), &transcript(&req.messages), CLI_TIMEOUT)
+            std::fs::create_dir_all(scratch).map_err(|e| e.to_string())?;
+            run_cli(claude_command(&bin, req, scratch), &transcript(&req.messages), CLI_TIMEOUT)
         }
         Provider::CodexCli => {
             let bin = locate("codex").ok_or("Codex CLI is not installed. Install it and run `codex login` to sign in.")?;
             std::fs::create_dir_all(scratch).map_err(|e| e.to_string())?;
-            let out_file = scratch.join(format!("codex-{}.txt", std::process::id()));
+            static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+            let n = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            let out_file = scratch.join(format!("codex-{}-{n}.txt", std::process::id()));
             // Codex has no system prompt flag, so the instructions lead the prompt.
             let prompt = format!("{}\n\n---\n\n{}", req.system, transcript(&req.messages));
             let result = run_cli(codex_command(&bin, req, &out_file, scratch), &prompt, CLI_TIMEOUT);
@@ -346,6 +357,8 @@ mod tests {
         let mut r = req(Provider::ClaudeCli, vec![msg("user", "hi")]);
         r.model = Some("kimi-k2; rm -rf".into());
         assert!(validate(&r).is_err());
+        r.model = Some("--help".into());
+        assert!(validate(&r).is_err());
         r.model = Some("anthropic/claude-sonnet-4.5".into());
         assert!(validate(&r).is_ok());
     }
@@ -362,7 +375,8 @@ mod tests {
     fn claude_runs_without_tools_sessions_or_settings() {
         let mut r = req(Provider::ClaudeCli, vec![msg("user", "hi")]);
         r.model = Some("sonnet".into());
-        let cmd = claude_command(Path::new("/bin/claude"), &r);
+        let cmd = claude_command(Path::new("/bin/claude"), &r, Path::new("/tmp/w"));
+        assert_eq!(cmd.get_current_dir(), Some(Path::new("/tmp/w")));
         let args: Vec<_> = cmd.get_args().map(|a| a.to_string_lossy().to_string()).collect();
         assert_eq!(args, ["-p", "--output-format", "text", "--tools", "", "--no-session-persistence", "--strict-mcp-config", "--setting-sources", "", "--system-prompt", "sys", "--model", "sonnet"]);
     }

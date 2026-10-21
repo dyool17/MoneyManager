@@ -16,7 +16,7 @@ Objective: chat with an AI about the user's reports. Branch `feat/ai-chat`. Deli
 | ID | Specs | Route | Status | Commit |
 |---|---|---|---|---|
 | T1 | S2, S4, S5 | inline | done | b541730 |
-| T2 | S1, S3, S5, S6 | inline | done | next commit |
+| T2 | S1, S3, S5, S6 | inline | done | e2aebd3 |
 
 ## Log
 
@@ -27,3 +27,4 @@ Objective: chat with an AI about the user's reports. Branch `feat/ai-chat`. Deli
 - Route: inline, no writer trigger (two dependent units, parent context fine).
 - L5: T1 done: 9 Rust tests (commands, timeouts, error line, key 0600, URL policy, OpenAI parse). Live `cargo test live_claude -- --ignored` passed (3.2 s).
 - L6: T2 done: context builder, safe markdown, chat store and view, Help and README. 76 Vitest tests pass. Pending: Codex live answer (account at usage limit) and OpenCode Go (no key available); UI not exercised inside the Tauri window.
+- L7: Independent verifier (Sonnet, medium): no blockers. Fixed advisories: leading '-' models, unique Codex output file, Claude runs in scratch dir, 100 KiB system cap, one-line descriptions. Live Claude re-run passed.

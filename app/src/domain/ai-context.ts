@@ -20,6 +20,8 @@ export interface ContextInput {
 }
 
 const n = (v: number) => (Math.round(v * 100) / 100).toFixed(2)
+/** Descriptions go in as one quoted line so a note cannot pose as instructions on its own line. */
+const oneLine = (s: string) => s.replace(/[\r\n\t]+/g, ' ').replace(/"/g, "'").slice(0, 120)
 const pct = (v: number | null) => (v === null ? 'n/a' : `${Math.round(v * 1000) / 10}%`)
 
 export function buildContext(input: ContextInput): string {
@@ -65,7 +67,7 @@ export function buildContext(input: ContextInput): string {
   for (const d of r.topDays) add(`- ${d.date}: ${n(d.total)} in ${d.count} expenses`)
   add()
   add(`## Repeating charges (${r.recurring.length})`)
-  for (const c of r.recurring.slice(0, 25)) add(`- ${input.includeDetails ? c.label : c.category}: ${n(c.amount)} in ${c.months} months`)
+  for (const c of r.recurring.slice(0, 25)) add(`- ${input.includeDetails ? oneLine(c.label) : c.category}: ${n(c.amount)} in ${c.months} months`)
   add()
   add('## Scheduled future expenses per month')
   add(commitments.map((c) => `${c.month} ${n(c.total)}`).join(', '))
@@ -81,14 +83,14 @@ export function buildContext(input: ContextInput): string {
   if (odd.length) {
     add()
     add('## Unusual expenses')
-    for (const o of odd) add(`- ${o.movement.date} ${o.movement.subcategoryName || o.movement.categoryName}${input.includeDetails && o.movement.content ? ` "${o.movement.content}"` : ''}: ${n(o.movement.amount)} (${o.times}x typical)`)
+    for (const o of odd) add(`- ${o.movement.date} ${o.movement.subcategoryName || o.movement.categoryName}${input.includeDetails && o.movement.content ? ` "${oneLine(o.movement.content)}"` : ''}: ${n(o.movement.amount)} (${o.times}x typical)`)
   }
   if (input.includeDetails) {
     add()
     add('## Largest expenses of the last three months')
     const cutoff = months.slice(-3)[0] ?? ''
     for (const m of inRange.filter((m) => m.type === 'expense' && !m.isFuture && m.date >= cutoff).sort((a, b) => b.amount - a.amount).slice(0, 30)) {
-      add(`- ${m.date} ${m.subcategoryName || m.categoryName}: "${m.content ?? ''}" ${n(m.amount)}`)
+      add(`- ${m.date} ${m.subcategoryName || m.categoryName}: "${oneLine(m.content ?? '')}" ${n(m.amount)}`)
     }
   }
   return lines.join('\n')
