@@ -82,8 +82,12 @@ app/src/
   components/      vistas Vue
 app/src-tauri/     lado nativo (HTTP al teléfono, respaldos, registro de escrituras)
 docs/              instalación, límites del servidor, contratos de la API
-fixtures/          respuestas reales anonimizadas para tests y modo demo
+fixtures/          respuestas sintéticas con la forma de las reales, para tests y modo demo
 ```
+
+### Datos personales fuera del repositorio
+
+El repositorio es público. El `.gitignore` excluye respaldos del teléfono (`.mmbak`), bases de datos, exportaciones CSV y hojas de cálculo, capturas del teléfono, archivos `.env`, claves y credenciales. Los fixtures de `fixtures/` son inventados y deben seguir siéndolo: nunca pegues ahí una respuesta real del teléfono. La API key del asistente se guarda en la carpeta de datos de la app, fuera del repositorio.
 
 ## Documentación
 

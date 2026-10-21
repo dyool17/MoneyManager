@@ -1,4 +1,51 @@
-# Private native phone backups must never be versioned.
+# This repository is public. Never version personal financial data or secrets.
+# Test and demo data lives in fixtures/ and must stay synthetic.
+
+# Native phone backups and local databases
 *.mmbak
 *.sqlite
 *.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Exports and spreadsheets produced from real data
+*.csv
+*.tsv
+*.xls
+*.xlsx
+*.ods
+*.ofx
+*.qif
+
+# Raw captures from a live phone (use fixtures/ for anonymized samples)
+captures/
+dumps/
+*.har
+
+# Secrets, keys, and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+*api-key*
+*api_key*
+*secret*
+*credentials*
+*token*.json
+
+# Local tool and agent state
+.claude/settings.local.json
+.codegraph/
+.engram/
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db
