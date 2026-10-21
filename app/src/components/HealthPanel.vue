@@ -2,6 +2,8 @@
 import { computed, ref, watch } from 'vue'
 import { useSession } from '../stores/session'
 import { useAccountMetadata } from '../stores/metadata'
+import { useHistory } from '../stores/history'
+import { budgetHistory } from '../domain/budget-history'
 import type { Insights } from '../domain/insights'
 import type { Movement } from '../domain/types'
 import {
@@ -14,6 +16,7 @@ import BarChart from './BarChart.vue'
 const props = defineProps<{ r: Insights; movements: Movement[]; first: string; last: string }>()
 const session = useSession()
 const metadata = useAccountMetadata()
+const history = useHistory()
 const today = computed(() => props.last)
 
 /* Emergency cushion: spendable groups are a per-viewer choice, remembered in this browser only. */
@@ -54,6 +57,10 @@ const odd = computed(() => outliers(props.movements.filter((m) => m.date >= prop
 const vol = computed(() => volatility(props.r.months.filter((m) => m.month < today.value.slice(0, 7))))
 const streak = computed(() => greenStreak(props.r.months, today.value))
 const improved = computed(() => props.r.changes.filter((c) => c.change <= -1).sort((a, b) => a.change - b.change).slice(0, 3))
+
+/* Budget track record over the analysed months */
+const budgetRecord = computed(() => budgetHistory(history.budgets.filter((b) => b.month >= props.first.slice(0, 7))))
+const monthName = (k: string) => new Date(Number(k.slice(0, 4)), Number(k.slice(5)) - 1, 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
 
 /* Score */
 const score = computed(() => healthScore({ savingsRate: props.r.savingsRate, cushion: cushion.value, cardDebt: cardDebt.value, averageIncome: averageIncome.value, volatility: vol.value, months: props.r.months }))
@@ -178,6 +185,29 @@ const saving = computed(() => simulateCut(monthlyByCategory.value, chosen.value,
       </div>
     </div>
 
+    <div class="card">
+      <div class="head">
+        <h3>Budget track record</h3>
+        <small v-if="budgetRecord.overallHitRate !== null">Stayed within budget {{ Math.round(budgetRecord.overallHitRate * 100) }}% of the time across {{ budgetRecord.months }} months</small>
+      </div>
+      <p v-if="history.budgetState === 'unavailable'" class="muted">Budgets are read from the phone. Connect it and press Reload.</p>
+      <p v-else-if="history.budgetState === 'loading'" class="muted">Reading one summary per month…</p>
+      <p v-else-if="history.budgetState === 'failed'" class="muted">Could not read past budgets. The other reports are not affected.</p>
+      <p v-else-if="!budgetRecord.records.length" class="muted">No budgets set in these months.</p>
+      <table v-else>
+        <tr><th scope="col">Category</th><th scope="col">Months over</th><th scope="col">Average excess</th><th scope="col">Worst month</th></tr>
+        <tr v-for="b in budgetRecord.records" :key="b.name">
+          <th scope="row">{{ b.name }}</th>
+          <td>
+            <span class="dots" :aria-label="`${b.over} of ${b.months}`"><i v-for="i in b.months" :key="i" :class="{ over: i <= b.over }" /></span>
+            {{ b.over }} of {{ b.months }}
+          </td>
+          <td :class="['amount', b.over ? 'expense' : 'muted']">{{ b.over ? formatMoney(b.averageOver) : '—' }}</td>
+          <td class="muted">{{ b.worst ? `${monthName(b.worst.month)} · ${formatMoney(b.worst.total)} of ${formatMoney(b.worst.budget)}` : 'Never over' }}</td>
+        </tr>
+      </table>
+    </div>
+
     <div class="grid2">
       <div class="card">
         <h3>Unusual expenses</h3>
@@ -264,6 +294,9 @@ th, td { text-align: left; font-weight: 400; padding: 0.4rem 0; border-bottom: 1
 th small { display: block; color: var(--ink-soft); font-size: 0.76rem; }
 td { padding-left: 0.75rem; white-space: nowrap; }
 td.amount { text-align: right; }
+.dots { display: inline-flex; gap: 2px; margin-right: 0.4rem; vertical-align: middle; }
+.dots i { width: 6px; height: 10px; border-radius: 2px; background: color-mix(in oklab, var(--income) 55%, var(--paper)); }
+.dots i.over { background: var(--expense); }
 .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.8rem; }
 .chips label { border: 1px solid var(--rule); border-radius: 99px; padding: 0.2rem 0.7rem; font-size: 0.82rem; cursor: pointer; }
 .chips label.on { background: color-mix(in oklab, var(--accent) 14%, var(--paper)); border-color: var(--accent); color: var(--accent); }
