@@ -162,7 +162,8 @@ function clearFilters() {
 .actions { margin-left: auto; display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .actions .primary { display: inline-flex; align-items: center; gap: 0.35rem; }
 .pills { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
-.pill { position: relative; cursor: pointer; padding: 0 0.4rem; }
+.pill { position: relative; cursor: pointer; padding: 0 0.4rem; border: 1px solid var(--rule); background: var(--paper); }
+.pill:hover { border-color: var(--ink-soft); }
 .pill select { border: 0; background: transparent; color: inherit; padding: 0.4rem 0.4rem; cursor: pointer; max-width: 14rem; }
 .pill select option { color: var(--ink); background: var(--paper); }
 .clear { border: 0; background: none; color: var(--accent); }
