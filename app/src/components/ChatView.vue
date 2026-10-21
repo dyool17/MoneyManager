@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useChat, DEFAULT_BASE_URL } from '../stores/chat'
 import { useHistory } from '../stores/history'
 import { renderMarkdown } from '../domain/markdown'
-import type { AiProvider } from '../infrastructure/ai'
+import { EFFORTS, type AiProvider } from '../infrastructure/ai'
 
 const chat = useChat()
 const history = useHistory()
@@ -13,10 +13,10 @@ const showSettings = ref(false)
 const showContext = ref(false)
 const log = ref<HTMLElement | null>(null)
 
-const PROVIDERS: { id: AiProvider; label: string; hint: string; placeholder: string }[] = [
-  { id: 'claude-cli', label: 'Claude subscription', hint: 'Uses the Claude Code app on this computer, signed in with your Claude plan.', placeholder: 'Default (for example sonnet or opus)' },
-  { id: 'codex-cli', label: 'ChatGPT subscription', hint: 'Uses the Codex CLI on this computer, signed in with your ChatGPT plan.', placeholder: 'Default (for example gpt-5)' },
-  { id: 'openai-compatible', label: 'API key (OpenCode Go)', hint: 'Any OpenAI-compatible endpoint. OpenCode Go is the default; billing follows that service.', placeholder: 'Required, for example kimi-k2' },
+const PROVIDERS: { id: AiProvider; label: string; hint: string; placeholder: string; models: string[] }[] = [
+  { id: 'claude-cli', label: 'Claude subscription', hint: 'Uses the Claude Code app on this computer, signed in with your Claude plan.', placeholder: 'Default (for example sonnet or opus)', models: ['sonnet', 'opus', 'haiku'] },
+  { id: 'codex-cli', label: 'ChatGPT subscription', hint: 'Uses the Codex CLI on this computer, signed in with your ChatGPT plan.', placeholder: 'Default (from your Codex settings)', models: [] },
+  { id: 'openai-compatible', label: 'API key (OpenCode Go)', hint: 'Any OpenAI-compatible endpoint. OpenCode Go is the default; billing follows that service.', placeholder: 'Required, for example kimi-k2', models: [] },
 ]
 const current = computed(() => PROVIDERS.find((p) => p.id === chat.settings.provider)!)
 const ready = computed(() => {
@@ -72,7 +72,7 @@ onMounted(() => {
     <header class="top">
       <div>
         <h1>Ask AI</h1>
-        <p class="sub">Talk about your reports. {{ current.label }}<template v-if="chat.settings.models[chat.settings.provider]"> · {{ chat.settings.models[chat.settings.provider] }}</template></p>
+        <p class="sub">Talk about your reports. {{ current.label }}<template v-if="chat.settings.models[chat.settings.provider]"> · {{ chat.settings.models[chat.settings.provider] }}</template><template v-if="chat.settings.efforts[chat.settings.provider]"> · {{ chat.settings.efforts[chat.settings.provider] }} effort</template></p>
       </div>
       <div class="actions">
         <button class="ghost" :disabled="!chat.messages.length" @click="chat.reset()">New chat</button>
@@ -93,9 +93,21 @@ onMounted(() => {
           </em>
         </label>
       </fieldset>
-      <label class="field">Model
-        <input v-model.trim="chat.settings.models[chat.settings.provider]" :placeholder="current.placeholder" spellcheck="false" />
-      </label>
+      <div class="row2">
+        <label class="field">Model
+          <input v-model.trim="chat.settings.models[chat.settings.provider]" :placeholder="current.placeholder" spellcheck="false" list="model-hints" />
+          <datalist id="model-hints">
+            <option v-for="m in current.models" :key="m" :value="m" />
+          </datalist>
+        </label>
+        <label class="field">Effort
+          <select v-model="chat.settings.efforts[chat.settings.provider]">
+            <option value="">Default</option>
+            <option v-for="e in EFFORTS[chat.settings.provider]" :key="e" :value="e">{{ e }}</option>
+          </select>
+        </label>
+      </div>
+      <small v-if="chat.settings.provider === 'openai-compatible' && chat.settings.efforts['openai-compatible']" class="muted">Some models reject the effort setting. Choose Default if you get an error.</small>
       <template v-if="chat.settings.provider === 'openai-compatible'">
         <label class="field">Base URL
           <input v-model.trim="chat.settings.baseUrl" :placeholder="DEFAULT_BASE_URL" spellcheck="false" />
@@ -164,7 +176,8 @@ legend { font-weight: 600; margin-bottom: 0.4rem; }
 .provider em.ok { color: var(--income); background: color-mix(in oklab, var(--income) 14%, var(--paper)); }
 .provider em.no { color: var(--ink-soft); background: var(--mist); }
 .field { display: grid; gap: 0.3rem; font-weight: 600; }
-.field input { font-weight: 400; }
+.field input, .field select { font-weight: 400; }
+.row2 { display: grid; grid-template-columns: 2fr 1fr; gap: 0.8rem; }
 .field small { display: block; font-weight: 400; color: var(--ink-soft); font-size: 0.8rem; }
 .key div { display: flex; gap: 0.5rem; }
 .key input { flex: 1; }

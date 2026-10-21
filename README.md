@@ -10,7 +10,7 @@ App de escritorio para ver y analizar en la computadora los datos de la app móv
 |---|---|
 | **Net worth** | Patrimonio actual, evolución mensual y en qué cuentas está tu dinero. |
 | **Insights** | Puntaje de salud financiera, riesgos, fortalezas, oportunidades de ahorro y patrones de gasto de hasta 12 meses. |
-| **Ask AI** | Chat sobre tus reportes con Claude, ChatGPT u OpenCode Go. |
+| **Ask AI** | Chat sobre tus reportes con Claude, ChatGPT u OpenCode Go; eliges proveedor, modelo y effort. |
 | **Monthly summary** | Ingresos, gastos y categorías de un mes. |
 | **Budgets** | Avance de cada presupuesto en el mes. |
 | **Transactions** | Movimientos del mes; crear, editar y eliminar con confirmación. |

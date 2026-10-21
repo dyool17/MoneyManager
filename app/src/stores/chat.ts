@@ -13,6 +13,7 @@ export const DEFAULT_BASE_URL = 'https://opencode.ai/zen/go/v1'
 export interface ChatSettings {
   provider: AiProvider
   models: Record<AiProvider, string>
+  efforts: Record<AiProvider, string>
   baseUrl: string
   includeDetails: boolean
 }
@@ -20,6 +21,7 @@ export interface ChatSettings {
 const defaults = (): ChatSettings => ({
   provider: 'claude-cli',
   models: { 'claude-cli': '', 'codex-cli': '', 'openai-compatible': '' },
+  efforts: { 'claude-cli': '', 'codex-cli': '', 'openai-compatible': '' },
   baseUrl: DEFAULT_BASE_URL,
   includeDetails: false,
 })
@@ -28,7 +30,7 @@ function readSettings(): ChatSettings {
   try {
     const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}')
     const d = defaults()
-    return { ...d, ...saved, models: { ...d.models, ...(saved.models ?? {}) } }
+    return { ...d, ...saved, models: { ...d.models, ...(saved.models ?? {}) }, efforts: { ...d.efforts, ...(saved.efforts ?? {}) } }
   } catch {
     return defaults()
   }
@@ -91,6 +93,7 @@ export const useChat = defineStore('chat', () => {
         system: systemPrompt(context.value),
         messages: messages.value,
         model: s.models[s.provider] || undefined,
+        effort: s.efforts[s.provider] || undefined,
         baseUrl: s.provider === 'openai-compatible' ? s.baseUrl : undefined,
       })
       messages.value = [...messages.value, { role: 'assistant', content: answer }]

@@ -38,6 +38,7 @@ pub struct ChatRequest {
     pub messages: Vec<ChatMessage>,
     pub model: Option<String>,
     pub base_url: Option<String>,
+    pub effort: Option<String>,
 }
 
 #[derive(Debug, Serialize, PartialEq, Eq)]
@@ -56,7 +57,25 @@ pub fn valid_model(model: &str) -> bool {
         && model.chars().all(|c| c.is_ascii_alphanumeric() || "._:/-".contains(c))
 }
 
+/// Reasoning effort levels each provider accepts; empty means the provider default.
+pub fn efforts(provider: Provider) -> &'static [&'static str] {
+    match provider {
+        Provider::ClaudeCli => &["low", "medium", "high", "xhigh", "max"],
+        Provider::CodexCli => &["minimal", "low", "medium", "high", "xhigh"],
+        Provider::OpenaiCompatible => &["low", "medium", "high"],
+    }
+}
+
+fn effort(req: &ChatRequest) -> Option<&str> {
+    req.effort.as_deref().filter(|e| !e.is_empty())
+}
+
 pub fn validate(req: &ChatRequest) -> Result<(), String> {
+    if let Some(e) = effort(req) {
+        if !efforts(req.provider).contains(&e) {
+            return Err("Unsupported effort level for this provider.".into());
+        }
+    }
     if req.messages.is_empty() || req.messages.last().map(|m| m.role.as_str()) != Some("user") {
         return Err("The conversation must end with a user message.".into());
     }
@@ -196,6 +215,9 @@ pub fn claude_command(bin: &Path, req: &ChatRequest, workdir: &Path) -> Command 
     if let Some(m) = req.model.as_deref().filter(|m| !m.is_empty()) {
         cmd.args(["--model", m]);
     }
+    if let Some(e) = effort(req) {
+        cmd.args(["--effort", e]);
+    }
     cmd
 }
 
@@ -207,6 +229,9 @@ pub fn codex_command(bin: &Path, req: &ChatRequest, out_file: &Path, workdir: &P
     cmd.arg("-o").arg(out_file);
     if let Some(m) = req.model.as_deref().filter(|m| !m.is_empty()) {
         cmd.args(["-m", m]);
+    }
+    if let Some(e) = effort(req) {
+        cmd.args(["-c", &format!("model_reasoning_effort={e}")]);
     }
     cmd.arg("-");
     cmd
@@ -254,7 +279,11 @@ pub fn validate_base_url(raw: &str) -> Result<url::Url, String> {
 pub fn openai_body(req: &ChatRequest, model: &str) -> serde_json::Value {
     let mut messages = vec![serde_json::json!({ "role": "system", "content": req.system })];
     messages.extend(req.messages.iter().map(|m| serde_json::json!({ "role": m.role, "content": m.content })));
-    serde_json::json!({ "model": model, "messages": messages })
+    let mut body = serde_json::json!({ "model": model, "messages": messages });
+    if let Some(e) = effort(req) {
+        body["reasoning_effort"] = serde_json::json!(e);
+    }
+    body
 }
 
 pub fn parse_openai(status: u16, body: &str) -> Result<String, String> {
@@ -339,7 +368,7 @@ mod tests {
         ChatMessage { role: role.into(), content: content.into() }
     }
     fn req(provider: Provider, messages: Vec<ChatMessage>) -> ChatRequest {
-        ChatRequest { provider, system: "sys".into(), messages, model: None, base_url: None }
+        ChatRequest { provider, system: "sys".into(), messages, model: None, base_url: None, effort: None }
     }
     fn scratch(name: &str) -> PathBuf {
         let d = std::env::temp_dir().join(format!("mm-ai-{name}-{}", std::process::id()));
@@ -357,6 +386,13 @@ mod tests {
         let mut r = req(Provider::ClaudeCli, vec![msg("user", "hi")]);
         r.model = Some("kimi-k2; rm -rf".into());
         assert!(validate(&r).is_err());
+        r.model = None;
+        r.effort = Some("max".into());
+        assert!(validate(&r).is_ok());
+        r.provider = Provider::CodexCli;
+        assert!(validate(&r).is_err());
+        r.provider = Provider::ClaudeCli;
+        r.effort = None;
         r.model = Some("--help".into());
         assert!(validate(&r).is_err());
         r.model = Some("anthropic/claude-sonnet-4.5".into());
@@ -375,18 +411,20 @@ mod tests {
     fn claude_runs_without_tools_sessions_or_settings() {
         let mut r = req(Provider::ClaudeCli, vec![msg("user", "hi")]);
         r.model = Some("sonnet".into());
+        r.effort = Some("high".into());
         let cmd = claude_command(Path::new("/bin/claude"), &r, Path::new("/tmp/w"));
         assert_eq!(cmd.get_current_dir(), Some(Path::new("/tmp/w")));
         let args: Vec<_> = cmd.get_args().map(|a| a.to_string_lossy().to_string()).collect();
-        assert_eq!(args, ["-p", "--output-format", "text", "--tools", "", "--no-session-persistence", "--strict-mcp-config", "--setting-sources", "", "--system-prompt", "sys", "--model", "sonnet"]);
+        assert_eq!(args, ["-p", "--output-format", "text", "--tools", "", "--no-session-persistence", "--strict-mcp-config", "--setting-sources", "", "--system-prompt", "sys", "--model", "sonnet", "--effort", "high"]);
     }
 
     #[test]
     fn codex_runs_read_only_and_ephemeral() {
-        let r = req(Provider::CodexCli, vec![msg("user", "hi")]);
+        let mut r = req(Provider::CodexCli, vec![msg("user", "hi")]);
+        r.effort = Some("minimal".into());
         let cmd = codex_command(Path::new("/bin/codex"), &r, Path::new("/tmp/o.txt"), Path::new("/tmp/w"));
         let args: Vec<_> = cmd.get_args().map(|a| a.to_string_lossy().to_string()).collect();
-        assert_eq!(args, ["exec", "--ephemeral", "--skip-git-repo-check", "-s", "read-only", "--color", "never", "-C", "/tmp/w", "-o", "/tmp/o.txt", "-"]);
+        assert_eq!(args, ["exec", "--ephemeral", "--skip-git-repo-check", "-s", "read-only", "--color", "never", "-C", "/tmp/w", "-o", "/tmp/o.txt", "-c", "model_reasoning_effort=minimal", "-"]);
     }
 
     #[cfg(unix)]
@@ -433,6 +471,10 @@ mod tests {
         assert_eq!(body["model"], "kimi-k2");
         assert_eq!(body["messages"][0], serde_json::json!({ "role": "system", "content": "sys" }));
         assert_eq!(body["messages"][1], serde_json::json!({ "role": "user", "content": "hi" }));
+        assert!(body.get("reasoning_effort").is_none());
+        let mut r = r;
+        r.effort = Some("high".into());
+        assert_eq!(openai_body(&r, "kimi-k2")["reasoning_effort"], "high");
         assert_eq!(parse_openai(200, r#"{"choices":[{"message":{"content":" Hola "}}]}"#).unwrap(), "Hola");
         assert_eq!(parse_openai(401, r#"{"error":{"message":"Invalid key"}}"#).unwrap_err(), "The provider answered 401: Invalid key");
         assert!(parse_openai(200, "{}").is_err());
@@ -448,6 +490,7 @@ mod tests {
             messages: vec![msg("user", "What is my average monthly spending?")],
             model: None,
             base_url: None,
+            effort: Some("low".into()),
         };
         let answer = chat_cli(&r, &scratch("live")).unwrap();
         assert!(answer.contains("1234.5") || answer.contains("1,234.5"), "{answer}");
