@@ -8,14 +8,11 @@ App de escritorio para ver y analizar en la computadora los datos de la app móv
 
 | Pantalla | Para qué sirve |
 |---|---|
-| **Net worth** | Patrimonio actual, evolución mensual y en qué cuentas está tu dinero. |
-| **Insights** | Puntaje de salud financiera, riesgos, fortalezas, oportunidades de ahorro y patrones de gasto de hasta 12 meses. |
-| **Ask AI** | Chat sobre tus reportes con Claude, ChatGPT u OpenCode Go; eliges proveedor, modelo y effort. |
-| **Monthly summary** | Ingresos, gastos y categorías de un mes. |
-| **Budgets** | Avance de cada presupuesto en el mes. |
-| **Transactions** | Movimientos del mes; crear, editar y eliminar con confirmación. |
-| **Accounts / Credit cards** | Saldos por cuenta y deuda por tarjeta. |
-| **Account metadata** | Qué cuentas suman al total, sus monedas y tasas. |
+| **Today** | Cómo va el mes: lo gastado, cuánto puedes gastar por día, el ritmo frente a un mes típico, la proyección de cierre y lo que requiere atención. Con un asistente configurado, un resumen de tres líneas. |
+| **Money** | Patrimonio e historial, y todas las cuentas, tarjetas y préstamos en una sola tabla ordenable con el detalle de cada cuenta. |
+| **Spending** | Movimientos del mes con categorías y presupuestos, filtros por categoría, cuenta y tipo; crear, editar y eliminar con confirmación. Sugiere la categoría según tus movimientos anteriores. |
+| **Analysis** | Salud financiera, informe mensual, meta de ahorro, riesgos, oportunidades y patrones de hasta 12 meses. |
+| **Settings** | Conexión con el teléfono y respaldos, metadata de cuentas, asistente de IA y tema claro u oscuro. |
 | **Help** | Guía de uso dentro de la app. |
 
 Sin teléfono conectado la app abre con **datos demo**, así puedes explorarla sin riesgo.
@@ -27,7 +24,7 @@ Sin teléfono conectado la app abre con **datos demo**, así puedes explorarla s
 3. Con el teléfono y la computadora en la misma red Wi-Fi, abre **Connect phone** y escribe la dirección que muestra el teléfono, por ejemplo `http://192.168.1.161:8080`.
 4. Mantén el teléfono desbloqueado y con Money Manager en pantalla: PC Manager se apaga al bloquearlo o al cambiar de app.
 
-## Reportes de Insights
+## Reportes de Analysis
 
 Todos los cálculos son deterministas: reglas fijas sobre tus datos, sin modelos ni servicios externos.
 
@@ -39,9 +36,11 @@ Todos los cálculos son deterministas: reglas fijas sobre tus datos, sin modelos
 
 Sin el teléfono a mano, **Open backup…** carga un respaldo `.mmbak` y calcula los reportes sin conexión. El archivo se lee en memoria y no se guarda.
 
-## Chat con IA (Ask AI)
+## Asistente de IA
 
-Conversa sobre tus reportes con tres tipos de proveedor:
+`Ctrl K` en cualquier pantalla permite preguntar o saltar a otra pantalla. **Ask** abre un panel lateral que sabe qué pantalla estás viendo, y los botones **Explain** y **Why?** preguntan por un gráfico o una alerta concreta. El asistente también escribe el resumen de Today y el informe mensual, propone un plan para tu meta de ahorro y, si lo permites, sugiere la categoría de un movimiento nuevo cuando tu historial no tiene una coincidencia. Sólo explica y sugiere: las cifras salen de los cálculos deterministas de la app y nada cambia en el teléfono sin tu confirmación. Sin asistente configurado esos botones no aparecen y el resto funciona igual.
+
+Proveedores disponibles:
 
 | Proveedor | Cómo se conecta | Quién cobra |
 |---|---|---|
@@ -53,7 +52,7 @@ Las suscripciones se usan a través de sus CLIs oficiales porque Anthropic no pe
 
 Si los reportes no alcanzan, el asistente puede pedir datos puntuales con un menú fijo de consultas de solo lectura: movimientos por categoría, cuenta, fechas o texto; totales por mes, categoría, cuenta o día de la semana; y el detalle de un día. La app las ejecuta localmente (cargando del teléfono hasta 24 meses atrás si hace falta), con un máximo de 3 rondas y 50 filas por consulta, y muestra bajo cada respuesta qué consultó. Nunca modifica nada.
 
-Privacidad: el asistente recibe las mismas cifras agregadas que muestra Insights. Los nombres de comercios y notas se envían sólo si activas **Share transaction descriptions**. En **What is shared** ves el texto exacto que se envía. La conversación no se guarda. La API key se guarda en la carpeta de datos de la app con permisos `0600` y nunca vuelve a la interfaz.
+Privacidad: el asistente recibe las mismas cifras agregadas que muestra Analysis. Los nombres de comercios y notas se envían sólo si activas **Share transaction descriptions**. En **Settings → Assistant → What is shared** ves el texto exacto que se envía. La conversación, el resumen y los informes no se guardan. La API key se guarda en la carpeta de datos de la app con permisos `0600` y nunca vuelve a la interfaz.
 
 ## Seguridad de los datos
 

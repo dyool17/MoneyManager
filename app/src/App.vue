@@ -73,7 +73,7 @@ onMounted(() => {
         <AskBar />
       </div>
       <StatusBanner />
-      <HelpView v-if="nav.screen === 'help'" @go="nav.go($event as Screen)" />
+      <HelpView v-if="nav.screen === 'help'" />
       <SettingsView v-else-if="nav.screen === 'settings' || !session.init" />
       <template v-else>
         <TodayView v-if="nav.screen === 'today'" />

@@ -1,15 +1,14 @@
 <script setup lang="ts">
-defineEmits<{ go: [view: string] }>()
+import { useNav, type Screen } from '../stores/nav'
 
-const SCREENS = [
-  { id: 'networth', title: 'Net worth', text: 'Your net worth today, how it moved month by month, and which accounts hold your money. Totals use the account metadata so excluded accounts and foreign currencies are handled the way your phone does.' },
-  { id: 'insights', title: 'Insights', text: 'Reports across up to 12 months: a financial health score, risks, strengths and weak spots, ways to spend less, and spending patterns. Pick 3, 6 or 12 months at the top right.' },
-  { id: 'chat', title: 'Ask AI', text: 'Chat about your reports with Claude, ChatGPT or an API-key provider such as OpenCode Go. Choose the provider, model and effort in Settings. Open "What is shared" to see exactly what the assistant reads.' },
-  { id: 'summary', title: 'Monthly summary', text: 'Income, spending and categories for one month. Move between months with the arrows above the page.' },
-  { id: 'budgets', title: 'Budgets', text: 'How each budget is doing this month, compared with how much of the month has passed.' },
-  { id: 'movements', title: 'Transactions', text: 'Every movement of the month. You can add, edit or delete entries; each change is shown for confirmation before it reaches the phone.' },
-  { id: 'accounts', title: 'Accounts and Credit cards', text: 'Balances per account and what you owe on each card.' },
-  { id: 'metadata', title: 'Account metadata', text: 'Choose which accounts count toward totals and set their currency and rate. Import it from a .mmbak backup or set it by hand. This never changes the phone.' },
+const nav = useNav()
+
+const SCREENS: { id: Screen; title: string; text: string }[] = [
+  { id: 'today', title: 'Today', text: 'How this month is going: what you have spent, how much you can still spend per day, where the month is heading against a typical month, and what needs attention. With an assistant set up, it also writes a three-line brief.' },
+  { id: 'money', title: 'Money', text: 'Net worth and its history, and every account, card and loan in one sortable table. Select an account to see its balance over time and this month\'s money in and out.' },
+  { id: 'spending', title: 'Spending', text: 'One month of movements with categories and budgets. Filter by category, account or type; add, edit or delete movements, each shown for confirmation before it reaches the phone. When you type a note, the app suggests the category you used before for it.' },
+  { id: 'analysis', title: 'Analysis', text: 'Reports across 3, 6 or 12 months in four tabs: Overview (health score, monthly report, savings goal), Risks, Opportunities and Patterns.' },
+  { id: 'settings', title: 'Settings', text: 'Connect the phone and keep backups, choose which accounts count toward totals and their currencies, set up the assistant, and pick a light or dark theme.' },
 ]
 
 const REPORTS = [
@@ -37,7 +36,7 @@ const REPORTS = [
       <ol>
         <li>On the phone, open Money Manager and go to <b>More → PC Manager → Start</b>.</li>
         <li>Keep the phone and this computer on the same Wi-Fi network.</li>
-        <li>Open <button class="link" @click="$emit('go', 'connection')">Connect phone</button> and type the address the phone shows, for example <code>http://192.168.1.161:8080</code>.</li>
+        <li>Open <button class="link" @click="nav.go('settings', 'phone')">Settings → Phone and backups</button> and type the address the phone shows, for example <code>http://192.168.1.161:8080</code>.</li>
         <li>Keep the phone unlocked with Money Manager on screen. PC Manager stops when the phone locks or you switch apps.</li>
       </ol>
       <p class="muted">Without a phone the app opens with demo data, so you can look around safely.</p>
@@ -45,13 +44,13 @@ const REPORTS = [
 
     <h2 class="section">Screens</h2>
     <div class="grid">
-      <button v-for="s in SCREENS" :key="s.id" class="card screen" @click="$emit('go', s.id)">
+      <button v-for="s in SCREENS" :key="s.id" class="card screen" @click="nav.go(s.id)">
         <strong>{{ s.title }}</strong>
         <span>{{ s.text }}</span>
       </button>
     </div>
 
-    <h2 class="section">Insights reports</h2>
+    <h2 class="section">Analysis reports</h2>
     <div class="card">
       <p class="muted">Every figure is computed with fixed rules from your own data. The same data always gives the same result.</p>
       <dl>
@@ -60,22 +59,23 @@ const REPORTS = [
           <dd>{{ text }}</dd>
         </template>
       </dl>
-      <p class="muted">No phone around? <b>Open backup…</b> in Insights reads a <code>.mmbak</code> backup in memory for offline reports. Balances, debt and budgets still come from the phone connection.</p>
+      <p class="muted">No phone around? <b>Open backup…</b> in Analysis reads a <code>.mmbak</code> backup in memory for offline reports. Balances, debt and budgets still come from the phone connection.</p>
     </div>
 
-    <h2 class="section">Ask AI</h2>
+    <h2 class="section">The assistant</h2>
     <div class="card">
+      <p class="muted">Press <kbd>Ctrl K</kbd> anywhere to ask a question or jump to a screen. <b>Ask</b> opens a side panel that knows which screen you are on; <b>Explain</b> and <b>Why?</b> buttons ask about one chart or alert. The assistant only explains and suggests: figures come from the app's own calculations, and nothing changes on the phone without your confirmation. Without an assistant set up these buttons are hidden and everything else works the same.</p>
       <dl>
         <dt>Claude subscription</dt>
         <dd>Install Claude Code and run <code>claude</code> once to sign in. The app calls it without tools, saved sessions or plugins; usage counts against your Claude plan.</dd>
         <dt>ChatGPT subscription</dt>
         <dd>Install the Codex CLI and run <code>codex login</code>. The app runs it read-only and without saving the session; usage counts against your ChatGPT plan.</dd>
         <dt>API key (OpenCode Go)</dt>
-        <dd>Paste the key from your provider and choose a model. The default address is <code>https://opencode.ai/zen/go/v1</code>; any OpenAI-compatible service works. The key is stored on this computer, readable only by your user, and never shown again.</dd>
+        <dd>In Settings → Assistant, paste the key from your provider and choose a model. The default address is <code>https://opencode.ai/zen/go/v1</code>; any OpenAI-compatible service works. The key is stored on this computer, readable only by your user, and never shown again.</dd>
         <dt>Looking up data</dt>
         <dd>When the reports are not enough, the assistant can ask the app for specific data: movements filtered by category, account, dates or text, totals by month, category, account or weekday, and one day's detail. The app runs these read-only lookups on this computer, loads up to 24 months from the phone when needed, and shows which lookups were used under each answer. Nothing is ever changed.</dd>
         <dt>What is shared</dt>
-        <dd>Totals, categories, dates and the same figures Insights shows. Shop names and notes, and searching by them, are sent only if you turn on "Share transaction descriptions". The conversation is not saved.</dd>
+        <dd>Totals, categories, dates and the same figures Analysis shows. Shop names and notes, and searching by them, are sent only if you turn on "Share transaction descriptions". The conversation, briefs and reports are not saved.</dd>
       </dl>
     </div>
 
@@ -98,7 +98,7 @@ const REPORTS = [
         <dt>It disconnected by itself</dt>
         <dd>The phone probably locked or switched apps. Unlock it, open Money Manager and press Reload.</dd>
         <dt>Net worth differs from the phone</dt>
-        <dd>Review <button class="link" @click="$emit('go', 'metadata')">Account metadata</button>: which accounts count and their currency rates.</dd>
+        <dd>Review <button class="link" @click="nav.go('settings', 'accounts')">Settings → Accounts</button>: which accounts count and their currency rates.</dd>
       </dl>
     </div>
   </section>
