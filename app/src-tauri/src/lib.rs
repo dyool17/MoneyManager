@@ -1,3 +1,4 @@
+mod ai;
 mod backup;
 mod export;
 #[cfg(test)]
@@ -140,11 +141,45 @@ async fn mm_write(
     result.map(|_| ())
 }
 
+fn ai_key_file(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    Ok(app.path().app_data_dir().map_err(|e| e.to_string())?.join("ai-key"))
+}
+
+/// Which AI providers can be used here. Reports whether a key exists, never the key.
+#[tauri::command]
+fn ai_status(app: tauri::AppHandle) -> Result<ai::AiStatus, String> {
+    Ok(ai::status(&ai_key_file(&app)?))
+}
+
+/// Saves or removes (`None`) the API key for the OpenAI-compatible provider.
+#[tauri::command]
+fn ai_set_key(app: tauri::AppHandle, key: Option<String>) -> Result<(), String> {
+    ai::write_key(&ai_key_file(&app)?, key.as_deref())
+}
+
+/// Sends the conversation to the chosen provider and returns its answer.
+#[tauri::command]
+async fn ai_chat(app: tauri::AppHandle, request: ai::ChatRequest) -> Result<String, String> {
+    ai::validate(&request)?;
+    match request.provider {
+        ai::Provider::OpenaiCompatible => {
+            let key = ai::read_key(&ai_key_file(&app)?).ok_or("Add an API key in the chat settings first.")?;
+            ai::chat_openai(&request, &key).await
+        }
+        _ => {
+            let scratch = app.path().app_cache_dir().map_err(|e| e.to_string())?.join("ai");
+            tauri::async_runtime::spawn_blocking(move || ai::chat_cli(&request, &scratch))
+                .await
+                .map_err(|e| e.to_string())?
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(PcManager::new())
-        .invoke_handler(tauri::generate_handler![mm_read, mm_backup, mm_export_csv, mm_write])
+        .invoke_handler(tauri::generate_handler![mm_read, mm_backup, mm_export_csv, mm_write, ai_status, ai_set_key, ai_chat])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

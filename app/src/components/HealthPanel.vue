@@ -7,11 +7,12 @@ import { budgetHistory } from '../domain/budget-history'
 import type { Insights } from '../domain/insights'
 import type { Movement } from '../domain/types'
 import {
-  cushionMonths, futureCommitments, greenStreak, healthScore, isLikelyLiquid, mainGroupShares,
+  cushionMonths, futureCommitments, greenStreak, healthScore, mainGroupShares,
   outliers, projectMonth, simulateCut, volatility,
 } from '../domain/health'
 import { formatDate, formatMoney } from '../domain/format'
 import BarChart from './BarChart.vue'
+import { useLiquid } from '../composables/liquid'
 
 const props = defineProps<{ r: Insights; movements: Movement[]; first: string; last: string }>()
 const session = useSession()
@@ -19,19 +20,9 @@ const metadata = useAccountMetadata()
 const history = useHistory()
 const today = computed(() => props.last)
 
-/* Emergency cushion: spendable groups are a per-viewer choice, remembered in this browser only. */
-const LIQUID_KEY = 'mm.liquidGroups'
-function readLiquid(): Record<string, boolean> {
-  try { return JSON.parse(localStorage.getItem(LIQUID_KEY) ?? '{}') } catch { return {} }
-}
-const liquidChoice = ref<Record<string, boolean>>(readLiquid())
-watch(liquidChoice, (v) => { try { localStorage.setItem(LIQUID_KEY, JSON.stringify(v)) } catch { /* private mode */ } }, { deep: true })
-const groups = computed(() => session.assets
-  .filter((g) => g.balance > 0)
-  .map((g) => ({ id: g.id, name: g.name, balance: g.balance, liquid: liquidChoice.value[g.id] ?? isLikelyLiquid(g.name) })))
-const liquid = computed(() => groups.value.filter((g) => g.liquid).reduce((a, g) => a + g.balance, 0))
+/* Emergency cushion */
+const { groups, liquid, toggle } = useLiquid()
 const cushion = computed(() => cushionMonths(liquid.value, props.r.averageExpense))
-const toggle = (id: string, on: boolean) => { liquidChoice.value = { ...liquidChoice.value, [id]: on } }
 
 /* Debt and income: same totals as the net worth view, corrected by account metadata when available. */
 const cardDebt = computed(() => Math.abs(metadata.totals.debts ?? session.dashboard?.debts ?? 0))

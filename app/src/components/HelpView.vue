@@ -4,6 +4,7 @@ defineEmits<{ go: [view: string] }>()
 const SCREENS = [
   { id: 'networth', title: 'Net worth', text: 'Your net worth today, how it moved month by month, and which accounts hold your money. Totals use the account metadata so excluded accounts and foreign currencies are handled the way your phone does.' },
   { id: 'insights', title: 'Insights', text: 'Reports across up to 12 months: a financial health score, risks, strengths and weak spots, ways to spend less, and spending patterns. Pick 3, 6 or 12 months at the top right.' },
+  { id: 'chat', title: 'Ask AI', text: 'Chat about your reports with Claude, ChatGPT or an API-key provider such as OpenCode Go. Choose the provider, model and effort in Settings. Open "What is shared" to see exactly what the assistant reads.' },
   { id: 'summary', title: 'Monthly summary', text: 'Income, spending and categories for one month. Move between months with the arrows above the page.' },
   { id: 'budgets', title: 'Budgets', text: 'How each budget is doing this month, compared with how much of the month has passed.' },
   { id: 'movements', title: 'Transactions', text: 'Every movement of the month. You can add, edit or delete entries; each change is shown for confirmation before it reaches the phone.' },
@@ -60,6 +61,20 @@ const REPORTS = [
         </template>
       </dl>
       <p class="muted">No phone around? <b>Open backup…</b> in Insights reads a <code>.mmbak</code> backup in memory for offline reports. Balances, debt and budgets still come from the phone connection.</p>
+    </div>
+
+    <h2 class="section">Ask AI</h2>
+    <div class="card">
+      <dl>
+        <dt>Claude subscription</dt>
+        <dd>Install Claude Code and run <code>claude</code> once to sign in. The app calls it without tools, saved sessions or plugins; usage counts against your Claude plan.</dd>
+        <dt>ChatGPT subscription</dt>
+        <dd>Install the Codex CLI and run <code>codex login</code>. The app runs it read-only and without saving the session; usage counts against your ChatGPT plan.</dd>
+        <dt>API key (OpenCode Go)</dt>
+        <dd>Paste the key from your provider and choose a model. The default address is <code>https://opencode.ai/zen/go/v1</code>; any OpenAI-compatible service works. The key is stored on this computer, readable only by your user, and never shown again.</dd>
+        <dt>What is shared</dt>
+        <dd>Totals, categories, dates and the same figures Insights shows. Shop names and notes are sent only if you turn on "Share transaction descriptions". The conversation is not saved.</dd>
+      </dl>
     </div>
 
     <h2 class="section">Changing data on the phone</h2>

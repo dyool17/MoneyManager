@@ -14,14 +14,16 @@ import AccountMetadataView from './components/AccountMetadataView.vue'
 import PendingChanges from './components/PendingChanges.vue'
 import InsightsView from './components/InsightsView.vue'
 import HelpView from './components/HelpView.vue'
+import ChatView from './components/ChatView.vue'
 
-type View = 'help' | 'insights' | 'networth' | 'summary' | 'budgets' | 'movements' | 'accounts' | 'cards' | 'connection' | 'metadata'
+type View = 'help' | 'chat' | 'insights' | 'networth' | 'summary' | 'budgets' | 'movements' | 'accounts' | 'cards' | 'connection' | 'metadata'
 const session = useSession()
 const view = ref<View>('networth')
 
 const NAV: { id: View; label: string }[] = [
   { id: 'networth', label: 'Net worth' },
   { id: 'insights', label: 'Insights' },
+  { id: 'chat', label: 'Ask AI' },
   { id: 'summary', label: 'Monthly summary' },
   { id: 'budgets', label: 'Budgets' },
   { id: 'movements', label: 'Transactions' },
@@ -32,6 +34,7 @@ const NAV: { id: View; label: string }[] = [
 ]
 /** 24px stroke icons, drawn inline so the rail needs no icon font. */
 const ICONS: Record<View, string> = {
+  chat: 'M4 5h16v11H9l-5 4zM8 9h8M8 12h5',
   help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01',
   insights: 'M4 19V9m5 10V5m5 14v-7m5 7V8',
   networth: 'M3 17l5-5 4 4 8-8M15 8h5v5',
@@ -91,6 +94,7 @@ onMounted(() => session.connect('demo'))
         <PendingChanges />
         <PeriodHeader v-if="monthly(view)" />
         <InsightsView v-if="view === 'insights'" />
+        <ChatView v-else-if="view === 'chat'" />
         <NetWorthView v-else-if="view === 'networth'" @configure="view = 'metadata'" />
         <SummaryView v-else-if="view === 'summary'" />
         <BudgetsView v-else-if="view === 'budgets'" />
