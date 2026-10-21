@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { aiAvailable, aiChat, aiSetKey, aiStatus, type AiMessage, type AiProvider, type AiStatus } from '../infrastructure/ai'
 import { buildContext, systemPrompt } from '../domain/ai-context'
+import { earliestDate, extractQueries, MAX_ROUNDS, QUERY_GUIDE, runQuery } from '../domain/ai-queries'
 import { useHistory } from './history'
 import { useSession } from './session'
 import { useAccountMetadata } from './metadata'
@@ -36,12 +37,18 @@ function readSettings(): ChatSettings {
   }
 }
 
+/** A visible message; `lookups` lists the data queries the assistant ran for it. */
+export interface ChatMessage extends AiMessage { lookups?: string[] }
+/** How far back a lookup may load from the phone. */
+const MAX_MONTHS_BACK = 24
+
 /** The conversation lives in memory only; settings (never the API key) are remembered. */
 export const useChat = defineStore('chat', () => {
   const settings = ref<ChatSettings>(readSettings())
   watch(settings, (v) => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(v)) } catch { /* private mode */ } }, { deep: true })
   const status = ref<AiStatus | null>(null)
-  const messages = ref<AiMessage[]>([])
+  const messages = ref<ChatMessage[]>([])
+  const lookingUp = ref<string | null>(null)
   const sending = ref(false)
   const error = ref<string | null>(null)
   const available = aiAvailable()
@@ -88,15 +95,31 @@ export const useChat = defineStore('chat', () => {
     sending.value = true
     try {
       const s = settings.value
-      const answer = await aiChat({
-        provider: s.provider,
-        system: systemPrompt(context.value),
-        messages: messages.value,
+      const system = `${systemPrompt(context.value)}\n\n${QUERY_GUIDE}`
+      const transcript: AiMessage[] = messages.value.map(({ role, content }) => ({ role, content }))
+      const lookups: string[] = []
+      const ask = () => aiChat({
+        provider: s.provider, system, messages: transcript,
         model: s.models[s.provider] || undefined,
         effort: s.efforts[s.provider] || undefined,
         baseUrl: s.provider === 'openai-compatible' ? s.baseUrl : undefined,
       })
-      messages.value = [...messages.value, { role: 'assistant', content: answer }]
+      let answer = await ask()
+      for (let round = 0; round < MAX_ROUNDS; round++) {
+        const queries = extractQueries(answer)
+        if (!queries.length) break
+        lookingUp.value = queries.map(describe).join(', ')
+        lookups.push(...queries.map(describe))
+        const results = await runAll(queries)
+        transcript.push({ role: 'assistant', content: answer }, { role: 'user', content: `Query results (from the app, not the user):\n\n${results}${round === MAX_ROUNDS - 1 ? '\n\nNo more lookups: answer now with what you have.' : ''}` })
+        answer = await ask()
+      }
+      // A last answer that still only asks for data has nothing to show.
+      if (extractQueries(answer).length) {
+        const rest = answer.replace(/```(?:query|json)?[\s\S]*?```/g, '').trim()
+        answer = rest && !extractQueries(rest).length ? rest : 'I could not finish looking up the data. Try a narrower question.'
+      }
+      messages.value = [...messages.value, { role: 'assistant', content: answer, ...(lookups.length ? { lookups } : {}) }]
       return true
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
@@ -104,11 +127,32 @@ export const useChat = defineStore('chat', () => {
       messages.value = messages.value.slice(0, -1)
       return false
     } finally {
+      lookingUp.value = null
       sending.value = false
     }
   }
 
+  function describe(q: Record<string, unknown>): string {
+    if (typeof q.error === 'string') return 'invalid query'
+    const parts = [q.groupBy && `by ${q.groupBy}`, q.category, q.account, q.text && `"${q.text}"`, q.date, q.from && `from ${q.from}`, q.to && `to ${q.to}`].filter(Boolean)
+    return `${String(q.tool)}${parts.length ? ` (${parts.join(', ')})` : ''}`
+  }
+
+  async function runAll(queries: Record<string, unknown>[]): Promise<string> {
+    let note = ''
+    const wanted = earliestDate(queries)
+    if (wanted) {
+      const today = new Date()
+      const floor = new Date(today.getFullYear(), today.getMonth() - MAX_MONTHS_BACK + 1, 1)
+      const limit = `${floor.getFullYear()}-${String(floor.getMonth() + 1).padStart(2, '0')}-01`
+      try { await history.extend(wanted < limit ? limit : wanted) } catch { note = 'Older months could not be loaded from the phone.\n' }
+    }
+    const loaded = history.movements.reduce((min, m) => (m.date < min ? m.date : min), history.span.first)
+    const options = { movements: history.movements, includeDetails: settings.value.includeDetails, available: { first: loaded, last: history.span.last } }
+    return note + queries.map((q, i) => `### Query ${i + 1}\n${runQuery(q, options)}`).join('\n\n')
+  }
+
   const reset = () => { messages.value = []; error.value = null }
 
-  return { settings, status, messages, sending, error, available, context, refreshStatus, saveKey, send, reset }
+  return { settings, status, messages, lookingUp, sending, error, available, context, refreshStatus, saveKey, send, reset }
 })
