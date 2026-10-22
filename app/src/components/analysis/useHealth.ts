@@ -1,4 +1,5 @@
 import { computed, type Ref } from 'vue'
+import { t, intlLocale } from '../../i18n'
 import { useSession } from '../../stores/session'
 import { useAccountMetadata } from '../../stores/metadata'
 import { useLiquid } from '../../composables/liquid'
@@ -30,8 +31,22 @@ export function useHealth(r: Ref<Insights>, movements: Ref<Movement[]>, first: R
   const cardDebt = computed(() => Math.abs(metadata.totals.debts ?? session.dashboard?.debts ?? 0))
   const averageIncome = computed(() => r.value.months.reduce((a, m) => a + m.income, 0) / (r.value.months.length || 1))
   const vol = computed(() => volatility(r.value.months.filter((m) => m.month < last.value.slice(0, 7))))
-  const score = computed(() => healthScore({ savingsRate: r.value.savingsRate, cushion: cushion.value, cardDebt: cardDebt.value, averageIncome: averageIncome.value, volatility: vol.value, months: r.value.months }))
-  const word = computed(() => scoreWord(score.value.total))
+  const score = computed(() => {
+    const result = healthScore({ savingsRate: r.value.savingsRate, cushion: cushion.value, cardDebt: cardDebt.value, averageIncome: averageIncome.value, volatility: vol.value, months: r.value.months })
+    const green = r.value.months.filter((m) => m.net > 0).length
+    const text: Record<string, { label: string; detail: string }> = {
+      savings: { label: t('Savings rate'), detail: t('Full points at 20% of income saved.') },
+      cushion: { label: t('Emergency cushion'), detail: t('Full points at 6 months of spending covered.') },
+      debt: { label: t('Debt load'), detail: t('Full points with no debt; none at one month of income.') },
+      steady: { label: t('Steady spending'), detail: t('Full points when monthly spend varies 10% or less.') },
+      green: { label: t('Months in the green'), detail: t('{green} of {total} months ended with money left over.', { green, total: r.value.months.length }) },
+    }
+    return { ...result, parts: result.parts.map((part) => ({ ...part, ...text[part.key] })) }
+  })
+  const word = computed(() => {
+    const words = { Fragile: t('Fragile'), Fair: t('Fair'), Solid: t('Solid'), Strong: t('Strong') }
+    return words[scoreWord(score.value.total)]
+  })
   const unknown = computed(() => unknownPartKeys({ savingsRate: r.value.savingsRate, cushion: cushion.value, averageIncome: averageIncome.value, volatility: vol.value }))
 
   const inSpan = computed(() => movements.value.filter((m) => m.date >= first.value && m.date <= last.value))
@@ -46,18 +61,18 @@ export function useHealth(r: Ref<Insights>, movements: Ref<Movement[]>, first: R
     const items: RiskItem[] = []
     const c = cushion.value
     if (c !== null) {
-      items.push({ key: 'cushion', title: 'Emergency cushion', value: `${c.toLocaleString(undefined, { maximumFractionDigits: 1 })} months`, detail: 'Aim for 3 to 6 months of spending.', severity: c >= 6 ? 0 : c >= 3 ? 1 : 2 })
+      items.push({ key: 'cushion', title: t('Emergency cushion'), value: t('{n} months', { n: c.toLocaleString(intlLocale(), { maximumFractionDigits: 1 }) }), detail: t('Aim for 3 to 6 months of spending.'), severity: c >= 6 ? 0 : c >= 3 ? 1 : 2 })
     }
     const p = projection.value
     if (p) {
-      items.push({ key: 'projection', title: 'Month-end projection', value: formatMoney(p.projected), detail: p.projected > p.income ? 'On track to spend more than you earn.' : p.projected > p.average ? 'Above your usual month.' : 'In line with your usual month.', severity: p.projected > p.income ? 2 : p.projected > p.average ? 1 : 0 })
+      items.push({ key: 'projection', title: t('Month-end projection'), value: formatMoney(p.projected), detail: p.projected > p.income ? t('On track to spend more than you earn.') : p.projected > p.average ? t('Above your usual month.') : t('In line with your usual month.'), severity: p.projected > p.income ? 2 : p.projected > p.average ? 1 : 0 })
     }
     if (averageIncome.value > 0) {
       const load = cardDebt.value / averageIncome.value
-      items.push({ key: 'debt', title: 'Debt load', value: `${Math.round(load * 100)}%`, detail: 'Owed compared with average monthly income.', severity: cardDebt.value === 0 ? 0 : load > 0.5 ? 2 : load > 0.3 ? 1 : 0 })
+      items.push({ key: 'debt', title: t('Debt load'), value: `${Math.round(load * 100)}%`, detail: t('Owed compared with average monthly income.'), severity: cardDebt.value === 0 ? 0 : load > 0.5 ? 2 : load > 0.3 ? 1 : 0 })
     }
     if (odd.value.length) {
-      items.push({ key: 'odd', title: 'Unusual expenses', value: String(odd.value.length), detail: 'Far above what that category usually costs.', severity: 1 })
+      items.push({ key: 'odd', title: t('Unusual expenses'), value: String(odd.value.length), detail: t('Far above what that category usually costs.'), severity: 1 })
     }
     return items
   })
