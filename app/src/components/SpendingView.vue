@@ -18,6 +18,7 @@ import ChangeDialog, { type Draft } from './ChangeDialog.vue'
 import CategoryBars from './spending/CategoryBars.vue'
 import BudgetPlanCard from './spending/BudgetPlanCard.vue'
 import LifeEventsCard from './spending/LifeEventsCard.vue'
+import BadDecisionsCard from './spending/BadDecisionsCard.vue'
 import AiButton from './AiButton.vue'
 import Icon from './Icon.vue'
 
@@ -153,6 +154,7 @@ function clearFilters() {
 
     <BudgetPlanCard />
     <LifeEventsCard />
+    <BadDecisionsCard />
 
     <div class="card cats">
       <div class="card-head"><h2>Income by category</h2></div>
