@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { t, intlLocale } from '../../i18n'
 import type { Insights } from '../../domain/insights'
 import { greenStreak, mainGroupShares } from '../../domain/health'
 import { formatDate, formatMoney } from '../../domain/format'
@@ -17,8 +18,8 @@ const { vol } = useHealth(r, computed(() => history.movements), computed(() => p
 const openDay = ref<string | null>(null)
 const dayMovements = computed(() => (openDay.value ? history.movements.filter((m) => m.date === openDay.value && m.type === 'expense').sort((a, b) => b.amount - a.amount) : []))
 
-const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const weekdayRows = computed(() => props.r.weekdays.map((w) => ({ label: WEEKDAYS[w.weekday]!, values: { average: w.average } })))
+const WEEKDAYS = computed(() => Array.from({ length: 7 }, (_, i) => new Date(2024, 0, i + 1).toLocaleDateString(intlLocale(), { weekday: 'short' })))
+const weekdayRows = computed(() => props.r.weekdays.map((w) => ({ label: WEEKDAYS.value[w.weekday]!, values: { average: w.average } })))
 const peakWeekday = computed(() => [...props.r.weekdays].sort((a, b) => b.average - a.average)[0])
 
 const months = computed(() => props.r.months.map((m) => m.month))
@@ -34,10 +35,10 @@ const subMax = computed(() => Math.max(1, ...subcategories.value.map((s) => s.to
     <div class="an-grid2">
       <div class="card">
         <div class="card-head">
-          <h2>Top subcategories</h2>
-          <AiButton question="Explain this chart" about="Top subcategories by spending" compact>Explain</AiButton>
+          <h2>{{ t('Top subcategories') }}</h2>
+          <AiButton :question="t('Explain this chart')" :about="t('Top subcategories by spending')" compact>{{ t('Explain') }}</AiButton>
         </div>
-        <p v-if="!subcategories.length" class="muted">No spending in this span.</p>
+        <p v-if="!subcategories.length" class="muted">{{ t('No spending in this span.') }}</p>
         <ol class="an-list">
           <li v-for="s in subcategories" :key="s.name" class="pt-sub">
             <div class="pt-line"><span>{{ s.name }} <small v-if="s.group" class="muted">{{ s.group }}</small></span><span class="num amount">{{ formatMoney(s.total) }}</span></div>
@@ -49,26 +50,26 @@ const subMax = computed(() => Math.max(1, ...subcategories.value.map((s) => s.to
       <div class="card">
         <div class="card-head">
           <div>
-            <h2>Spending by day of the week</h2>
-            <small v-if="peakWeekday" class="muted">{{ WEEKDAYS[peakWeekday.weekday] }} costs the most: {{ formatMoney(peakWeekday.average) }} on average</small>
+            <h2>{{ t('Spending by day of the week') }}</h2>
+            <small v-if="peakWeekday" class="muted">{{ t('{day} costs the most: {amount} on average', { day: WEEKDAYS[peakWeekday.weekday]!, amount: formatMoney(peakWeekday.average) }) }}</small>
           </div>
-          <AiButton question="Explain this chart" about="Average spending per weekday" compact>Explain</AiButton>
+          <AiButton :question="t('Explain this chart')" :about="t('Average spending per weekday')" compact>{{ t('Explain') }}</AiButton>
         </div>
-        <BarChart :rows="weekdayRows" :series="[{ key: 'average', label: 'Average', color: 'var(--accent)' }]" label="Average spending per weekday" :height="180" />
+        <BarChart :rows="weekdayRows" :series="[{ key: 'average', label: t('Average'), color: 'var(--accent)' }]" :label="t('Average spending per weekday')" :height="180" />
       </div>
     </div>
 
     <div class="an-grid2">
       <div class="card">
         <div class="card-head">
-          <h2>Days you spent the most</h2>
-          <AiButton question="What happened on the days I spent the most?" about="Highest spending days" compact>Why?</AiButton>
+          <h2>{{ t('Days you spent the most') }}</h2>
+          <AiButton :question="t('What happened on the days I spent the most?')" :about="t('Highest spending days')" compact>{{ t('Why?') }}</AiButton>
         </div>
         <ol class="an-list">
           <li v-for="(d, i) in r.topDays" :key="d.date">
             <button type="button" class="pt-day" :aria-expanded="openDay === d.date" @click="openDay = openDay === d.date ? null : d.date">
-              <span class="pt-rank num">{{ i + 1 }}</span>
-              <span>{{ formatDate(d.date) }} <small class="muted">{{ d.count }} {{ d.count === 1 ? 'expense' : 'expenses' }}</small></span>
+              <span class="pt-rank num">{{ (i + 1).toLocaleString(intlLocale()) }}</span>
+              <span>{{ formatDate(d.date) }} <small class="muted">{{ d.count.toLocaleString(intlLocale()) }} {{ d.count === 1 ? t('expense') : t('expenses') }}</small></span>
               <span class="amount num expense">{{ formatMoney(d.total) }}</span>
             </button>
             <ul v-if="openDay === d.date" class="pt-day-list">
@@ -82,36 +83,36 @@ const subMax = computed(() => Math.max(1, ...subcategories.value.map((s) => s.to
       </div>
 
       <div class="card">
-        <div class="card-head"><h2>Strengths and weak spots</h2></div>
+        <div class="card-head"><h2>{{ t('Strengths and weak spots') }}</h2></div>
         <ul class="pt-signals">
           <li>
-            <b>{{ streak }} {{ streak === 1 ? 'month' : 'months' }}</b> in a row with money left over
-            <span class="pt-flag">{{ streak >= 3 ? 'Strength' : streak === 0 ? 'Weak spot' : 'Neutral' }}</span>
+            <b>{{ streak.toLocaleString(intlLocale()) }} {{ streak === 1 ? t('month') : t('months') }}</b> {{ t('in a row with money left over') }}
+            <span class="pt-flag">{{ streak >= 3 ? t('Strength') : streak === 0 ? t('Weak spot') : t('Neutral') }}</span>
           </li>
           <li v-if="vol !== null">
-            Monthly spend varies <b>{{ Math.round(vol * 100) }}%</b> around its average · {{ vol <= 0.15 ? 'steady' : vol >= 0.3 ? 'hard to predict' : 'moderate' }}
-            <span class="pt-flag">{{ vol <= 0.15 ? 'Strength' : vol >= 0.3 ? 'Weak spot' : 'Neutral' }}</span>
+            {{ t('Monthly spend varies') }} <b>{{ Math.round(vol * 100).toLocaleString(intlLocale()) }}%</b> {{ t('around its average') }} · {{ vol <= 0.15 ? t('steady') : vol >= 0.3 ? t('hard to predict') : t('moderate') }}
+            <span class="pt-flag">{{ vol <= 0.15 ? t('Strength') : vol >= 0.3 ? t('Weak spot') : t('Neutral') }}</span>
           </li>
           <li v-for="c in improved" :key="c.name">
-            <b>{{ c.name }}</b> down {{ formatMoney(-c.change) }}/mo vs the three months before
-            <span class="pt-flag">Strength</span>
+            <b>{{ c.name }}</b> {{ t('down {amount}/mo vs the three months before', { amount: formatMoney(-c.change) }) }}
+            <span class="pt-flag">{{ t('Strength') }}</span>
           </li>
-          <li v-if="!improved.length" class="muted">No category dropped in the last three months.</li>
+          <li v-if="!improved.length" class="muted">{{ t('No category dropped in the last three months.') }}</li>
         </ul>
-        <h3 class="pt-sub-title">How your spending splits</h3>
+        <h3 class="pt-sub-title">{{ t('How your spending splits') }}</h3>
         <div v-for="g in groupsShare.slice(0, 5)" :key="g.name" class="pt-split">
-          <div class="pt-line"><span>{{ g.name }}</span><b class="num">{{ Math.round(g.share * 100) }}%</b></div>
+          <div class="pt-line"><span>{{ g.name }}</span><b class="num">{{ Math.round(g.share * 100).toLocaleString(intlLocale()) }}%</b></div>
           <div class="track"><span :style="{ width: `${g.share * 100}%` }" /></div>
-          <small v-if="g.previousShare !== null" class="muted">{{ Math.round(g.previousShare * 100) }}% in the three months before that</small>
+          <small v-if="g.previousShare !== null" class="muted">{{ t('{n}% in the three months before that', { n: Math.round(g.previousShare * 100).toLocaleString(intlLocale()) }) }}</small>
         </div>
-        <p v-if="groupsShare.length > 1" class="muted an-note">A high fixed share leaves little room to adjust when income drops.</p>
+        <p v-if="groupsShare.length > 1" class="muted an-note">{{ t('A high fixed share leaves little room to adjust when income drops.') }}</p>
       </div>
     </div>
 
     <div class="card">
       <div class="card-head">
-        <h2>Daily spending calendar</h2>
-        <AiButton question="Explain this chart" about="Daily spending calendar" compact>Explain</AiButton>
+        <h2>{{ t('Daily spending calendar') }}</h2>
+        <AiButton :question="t('Explain this chart')" :about="t('Daily spending calendar')" compact>{{ t('Explain') }}</AiButton>
       </div>
       <SpendingCalendar :days="r.days" :first="first" :last="last" />
     </div>

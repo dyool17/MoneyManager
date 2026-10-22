@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { t, intlLocale } from '../../i18n'
 import type { Insights } from '../../domain/insights'
+import { opportunityTitle, opportunityDetail } from './opportunity-text'
 import { categoryShares } from '../../domain/insights'
 import { formatMoney, monthLabel } from '../../domain/format'
 import { useHistory } from '../../stores/history'
@@ -54,7 +55,7 @@ const changeOf = (name: string) => props.r.changes.find((c) => c.name === name)
 const worst = computed(() => [...props.r.months].sort((a, b) => b.expense - a.expense)[0])
 const best = computed(() => [...props.r.months].sort((a, b) => b.net - a.net)[0])
 const topOpps = computed(() => props.r.opportunities.slice(0, 3))
-const oppLabel = (o: Insights['opportunities'][number]) => (o.month ? t('Spent more than earned in {month}', { month: monthLabel(o.month + '-01') }) : o.title)
+const oppLabel = opportunityTitle
 </script>
 
 <template>
@@ -73,7 +74,7 @@ const oppLabel = (o: Insights['opportunities'][number]) => (o.month ? t('Spent m
             <span class="label">{{ t('Financial health') }}</span>
             <h2 class="num ov-word">{{ word }}</h2>
           </div>
-          <AiButton question="Why is my financial health score what it is, and what would raise it most?" :about="t('Financial health score')" compact>{{ t('Why?') }}</AiButton>
+          <AiButton :question="t('Why is my financial health score what it is, and what would raise it most?')" :about="t('Financial health score')" compact>{{ t('Why?') }}</AiButton>
         </div>
         <div v-for="p in score.parts" :key="p.key" class="ov-part" :title="p.detail">
           <span>{{ p.label }}</span>
@@ -98,7 +99,7 @@ const oppLabel = (o: Insights['opportunities'][number]) => (o.month ? t('Spent m
             <h2>{{ t('Income and spending by month') }}</h2>
             <small class="muted">{{ t('Click a month to see its categories.') }}</small>
           </div>
-          <AiButton question="Explain this chart" :about="t('Income and spending by month')" compact>{{ t('Explain') }}</AiButton>
+          <AiButton :question="t('Explain this chart')" :about="t('Income and spending by month')" compact>{{ t('Explain') }}</AiButton>
         </div>
         <BarChart :rows="monthRows" :series="SERIES" :label="t('Income and spending by month')" :selected="selectedMonth" :color-for="colorFor" :notes="notes"
           :extra-legend="overIdx.size ? [{ label: t('Spent more than earned'), color: 'var(--expense)' }] : []" @select="selectedMonth = $event" />
@@ -144,7 +145,7 @@ const oppLabel = (o: Insights['opportunities'][number]) => (o.month ? t('Spent m
         <p v-if="!topOpps.length" class="muted">{{ t('Nothing stands out. Nice.') }}</p>
         <ul class="an-list">
           <li v-for="(o, i) in topOpps" :key="i" class="an-row">
-            <div><strong>{{ oppLabel(o) }}</strong><p>{{ o.detail }}</p></div>
+            <div><strong>{{ oppLabel(o) }}</strong><p>{{ opportunityDetail(o) }}</p></div>
             <span class="num amount">{{ formatMoney(o.monthly) }}<small class="muted">{{ o.kind === 'overspent-month' ? t(' over') : t('/mo') }}</small></span>
           </li>
         </ul>

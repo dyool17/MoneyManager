@@ -1,4 +1,5 @@
 import type { Movement } from './types'
+import { t } from '../i18n'
 
 const TYPE: Record<Movement['type'], string> = {
   income: 'Income',
@@ -21,11 +22,11 @@ export function csvCell(value: string | number | undefined): string {
 
 /** Movements as CSV with a UTF-8 BOM so Excel opens accents correctly. */
 export function movementsCsv(rows: Movement[]): string {
-  const header = ['Date', 'Type', 'Account', 'To account', 'Category', 'Subcategory', 'Note', 'Detail', 'Amount', 'Upcoming', 'Id']
+  const header = ['Date', 'Type', 'Account', 'To account', 'Category', 'Subcategory', 'Note', 'Detail', 'Amount', 'Upcoming', 'Id'].map((key) => t(key))
   const lines = rows.map((m) =>
     [
       m.date,
-      TYPE[m.type],
+      t(TYPE[m.type]),
       m.accountName,
       m.toAssetId,
       m.categoryName,
@@ -33,11 +34,11 @@ export function movementsCsv(rows: Movement[]): string {
       m.content,
       m.detail,
       m.amount,
-      m.isFuture ? 'yes' : 'no',
+      m.isFuture ? t('yes') : t('no'),
       m.id,
     ]
       .map(csvCell)
       .join(','),
   )
-  return '﻿' + [header.join(','), ...lines].join('\r\n') + '\r\n'
+  return '﻿' + [header.map(csvCell).join(','), ...lines].join('\r\n') + '\r\n'
 }
