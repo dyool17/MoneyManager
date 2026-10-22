@@ -6,7 +6,7 @@ const nav = useNav()
 const SCREENS: { id: Screen; title: string; text: string }[] = [
   { id: 'today', title: 'Today', text: 'How this month is going: what you have spent, how much you can still spend per day, where the month is heading against a typical month, and what needs attention. With an assistant set up, it also writes a three-line brief.' },
   { id: 'money', title: 'Money', text: 'Net worth and its history, and every account, card and loan in one sortable table. Select an account to see its balance over time and this month\'s money in and out.' },
-  { id: 'spending', title: 'Spending', text: 'One month of movements with categories and budgets. Filter by category, account or type; add, edit or delete movements, each shown for confirmation before it reaches the phone. When you type a note, the app suggests the category you used before for it.' },
+  { id: 'spending', title: 'Spending', text: 'One month of movements with categories and budgets. Filter by category, account or type; add, edit or delete movements, each shown for confirmation before it reaches the phone. When you type a note, the app suggests the category you used before for it. Below the categories: budgets imported from a phone backup (judged month by month or over the year), your recorded life events, and flagged possible bad decisions.' },
   { id: 'analysis', title: 'Analysis', text: 'Reports across 3, 6 or 12 months in four tabs: Overview (health score, monthly report, savings goal), Risks, Opportunities and Patterns.' },
   { id: 'settings', title: 'Settings', text: 'Connect the phone and keep backups, choose which accounts count toward totals and their currencies, set up the assistant, and pick a light or dark theme.' },
 ]
@@ -21,6 +21,12 @@ const REPORTS = [
   ['Unusual expenses', 'Expenses more than two standard deviations above their category norm and at least 1.5 times the usual amount. Repeating charges are left out.'],
   ['What if you cut back?', 'Pick categories and a percentage to see the monthly and yearly saving, and how many months it adds to your cushion.'],
   ['Patterns', 'Income against spending per month (click a month to filter categories), top subcategories, the most expensive weekday, the days you spent the most and a daily calendar.'],
+]
+
+const SPENDING_TOOLS = [
+  ['Imported budgets', 'Subcategory budgets only exist in a .mmbak backup you export from the phone, so Spending asks you to import one. Each category is judged monthly as usual, or over the year when seasonal spending comes in bursts — the app suggests it and you confirm per category. Everything is saved on this computer only.'],
+  ['Life events', 'Notes like a move, an illness or a new baby that explain unusual spending: a one-off spike (kept out of the projection baseline), a new normal (the baseline restarts there) or temporary higher spending. The assistant reads them without labels unless you share transaction descriptions.'],
+  ['Possible bad decisions', 'Expenses of a discretionary category that look big (far above their usual cost, half the budget or more, or pushing the budget over the line) and that no life event, repeating charge or yearly allowance explains. You can ask the assistant why, turn one into a life event, or dismiss it for good.'],
 ]
 </script>
 
@@ -60,6 +66,16 @@ const REPORTS = [
         </template>
       </dl>
       <p class="muted">No phone around? <b>Open backup…</b> in Analysis reads a <code>.mmbak</code> backup in memory for offline reports. Balances, debt and budgets still come from the phone connection.</p>
+    </div>
+
+    <h2 class="section">Spending tools</h2>
+    <div class="card">
+      <dl>
+        <template v-for="[term, text] in SPENDING_TOOLS" :key="term">
+          <dt>{{ term }}</dt>
+          <dd>{{ text }}</dd>
+        </template>
+      </dl>
     </div>
 
     <h2 class="section">The assistant</h2>
