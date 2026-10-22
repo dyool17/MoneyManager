@@ -64,7 +64,7 @@ onMounted(() => { chat.refreshStatus(); input.value?.focus() })
     </header>
 
     <p v-if="nav.focus" class="focus">
-      <span>{{ t('Looking at:') }} <b>{{ t(nav.focus) }}</b></span>
+      <span>{{ t('Looking at:') }} <b>{{ nav.focus }}</b></span>
       <button type="button" :aria-label="t('Stop focusing on this')" @click="nav.focus = null"><Icon name="close" :size="12" /></button>
     </p>
 
@@ -96,7 +96,7 @@ onMounted(() => { chat.refreshStatus(); input.value?.focus() })
     <p v-if="chat.error" class="error" role="alert">{{ t(chat.error) }}</p>
 
     <form class="composer" @submit.prevent="send()">
-      <textarea ref="input" v-model="draft" rows="2" :placeholder="nav.focus ? t('Ask about {focus}…', { focus: t(nav.focus) }) : t('Ask about your money…')" :disabled="!chat.available" @keydown="onKey" />
+      <textarea ref="input" v-model="draft" rows="2" :placeholder="nav.focus ? t('Ask about {focus}…', { focus: nav.focus }) : t('Ask about your money…')" :disabled="!chat.available" @keydown="onKey" />
       <button type="submit" class="primary" :disabled="!chat.ready || chat.sending || !draft.trim()">{{ t('Send') }}</button>
     </form>
     <p class="foot muted">{{ t('Reads totals and categories; shop names only if you allow it in Settings.') }}</p>

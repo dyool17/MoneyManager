@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '../i18n'
 import { useNav, type Screen } from '../stores/nav'
 
 const nav = useNav()
@@ -33,88 +34,88 @@ const SPENDING_TOOLS = [
 <template>
   <section class="help">
     <header>
-      <h1>Help</h1>
-      <p class="lead">Money Manager Desktop shows and analyses the data of the Money Manager phone app on your computer. Everything stays on this computer.</p>
+      <h1>{{ t('Help') }}</h1>
+      <p class="lead">{{ t('Money Manager Desktop shows and analyses the data of the Money Manager phone app on your computer. Everything stays on this computer.') }}</p>
     </header>
 
     <div class="card steps">
-      <h2>Connect your phone</h2>
+      <h2>{{ t('Connect your phone') }}</h2>
       <ol>
-        <li>On the phone, open Money Manager and go to <b>More → PC Manager → Start</b>.</li>
-        <li>Keep the phone and this computer on the same Wi-Fi network.</li>
-        <li>Open <button class="link" @click="nav.go('settings', 'phone')">Settings → Phone and backups</button> and type the address the phone shows, for example <code>http://192.168.1.161:8080</code>.</li>
-        <li>Keep the phone unlocked with Money Manager on screen. PC Manager stops when the phone locks or you switch apps.</li>
+        <li>{{ t('On the phone, open Money Manager and go to') }} <b>{{ t('More → PC Manager → Start') }}</b>.</li>
+        <li>{{ t('Keep the phone and this computer on the same Wi-Fi network.') }}</li>
+        <li>{{ t('Open') }} <button class="link" @click="nav.go('settings', 'phone')">{{ t('Settings → Phone and backups') }}</button> {{ t('and type the address the phone shows, for example') }} <code>http://192.168.1.161:8080</code>.</li>
+        <li>{{ t('Keep the phone unlocked with Money Manager on screen. PC Manager stops when the phone locks or you switch apps.') }}</li>
       </ol>
-      <p class="muted">Without a phone the app opens with demo data, so you can look around safely.</p>
+      <p class="muted">{{ t('Without a phone the app opens with demo data, so you can look around safely.') }}</p>
     </div>
 
-    <h2 class="section">Screens</h2>
+    <h2 class="section">{{ t('Screens') }}</h2>
     <div class="grid">
       <button v-for="s in SCREENS" :key="s.id" class="card screen" @click="nav.go(s.id)">
-        <strong>{{ s.title }}</strong>
-        <span>{{ s.text }}</span>
+        <strong>{{ t(s.title) }}</strong>
+        <span>{{ t(s.text) }}</span>
       </button>
     </div>
 
-    <h2 class="section">Analysis reports</h2>
+    <h2 class="section">{{ t('Analysis reports') }}</h2>
     <div class="card">
-      <p class="muted">Every figure is computed with fixed rules from your own data. The same data always gives the same result.</p>
+      <p class="muted">{{ t('Every figure is computed with fixed rules from your own data. The same data always gives the same result.') }}</p>
       <dl>
         <template v-for="[term, text] in REPORTS" :key="term">
-          <dt>{{ term }}</dt>
-          <dd>{{ text }}</dd>
+          <dt>{{ t(term) }}</dt>
+          <dd>{{ t(text) }}</dd>
         </template>
       </dl>
-      <p class="muted">No phone around? <b>Open backup…</b> in Analysis reads a <code>.mmbak</code> backup in memory for offline reports. Balances, debt and budgets still come from the phone connection.</p>
+      <p class="muted">{{ t('No phone around?') }} <b>{{ t('Open backup…') }}</b> {{ t('in Analysis reads a') }} <code>.mmbak</code> {{ t('backup in memory for offline reports. Balances, debt and budgets still come from the phone connection.') }}</p>
     </div>
 
-    <h2 class="section">Spending tools</h2>
+    <h2 class="section">{{ t('Spending tools') }}</h2>
     <div class="card">
       <dl>
         <template v-for="[term, text] in SPENDING_TOOLS" :key="term">
-          <dt>{{ term }}</dt>
-          <dd>{{ text }}</dd>
+          <dt>{{ t(term) }}</dt>
+          <dd>{{ t(text) }}</dd>
         </template>
       </dl>
     </div>
 
-    <h2 class="section">The assistant</h2>
+    <h2 class="section">{{ t('The assistant') }}</h2>
     <div class="card">
-      <p class="muted">Press <kbd>Ctrl K</kbd> anywhere to ask a question or jump to a screen. <b>Ask</b> opens a side panel that knows which screen you are on; <b>Explain</b> and <b>Why?</b> buttons ask about one chart or alert. The assistant only explains and suggests: figures come from the app's own calculations, and nothing changes on the phone without your confirmation. Without an assistant set up these buttons are hidden and everything else works the same.</p>
+      <p class="muted">{{ t('Press') }} <kbd>Ctrl K</kbd> {{ t('anywhere to ask a question or jump to a screen.') }} <b>{{ t('Ask') }}</b> {{ t('opens a side panel that knows which screen you are on;') }} <b>{{ t('Explain') }}</b> {{ t('and') }} <b>{{ t('Why?') }}</b> {{ t('buttons ask about one chart or alert. The assistant only explains and suggests: figures come from the app\'s own calculations, and nothing changes on the phone without your confirmation. Without an assistant set up these buttons are hidden and everything else works the same.') }}</p>
       <dl>
-        <dt>Claude subscription</dt>
-        <dd>Install Claude Code and run <code>claude</code> once to sign in. The app calls it without tools, saved sessions or plugins; usage counts against your Claude plan.</dd>
-        <dt>ChatGPT subscription</dt>
-        <dd>Install the Codex CLI and run <code>codex login</code>. The app runs it read-only and without saving the session; usage counts against your ChatGPT plan.</dd>
-        <dt>API key (OpenCode Go)</dt>
-        <dd>In Settings → Assistant, paste the key from your provider and choose a model. The default address is <code>https://opencode.ai/zen/go/v1</code>; any OpenAI-compatible service works. The key is stored on this computer, readable only by your user, and never shown again.</dd>
-        <dt>Looking up data</dt>
-        <dd>When the reports are not enough, the assistant can ask the app for specific data: movements filtered by category, account, dates or text, totals by month, category, account or weekday, and one day's detail. The app runs these read-only lookups on this computer, loads up to 24 months from the phone when needed, and shows which lookups were used under each answer. Nothing is ever changed.</dd>
-        <dt>What is shared</dt>
-        <dd>Totals, categories, dates and the same figures Analysis shows. Shop names and notes, and searching by them, are sent only if you turn on "Share transaction descriptions". The conversation, briefs and reports are not saved.</dd>
+        <dt>{{ t('Claude subscription') }}</dt>
+        <dd>{{ t('Install Claude Code and run') }} <code>claude</code> {{ t('once to sign in. The app calls it without tools, saved sessions or plugins; usage counts against your Claude plan.') }}</dd>
+        <dt>{{ t('ChatGPT subscription') }}</dt>
+        <dd>{{ t('Install the Codex CLI and run') }} <code>codex login</code>. {{ t('The app runs it read-only and without saving the session; usage counts against your ChatGPT plan.') }}</dd>
+        <dt>{{ t('API key (OpenCode Go)') }}</dt>
+        <dd>{{ t('In Settings → Assistant, paste the key from your provider and choose a model. The default address is') }} <code>https://opencode.ai/zen/go/v1</code>; {{ t('any OpenAI-compatible service works. The key is stored on this computer, readable only by your user, and never shown again.') }}</dd>
+        <dt>{{ t('Looking up data') }}</dt>
+        <dd>{{ t('When the reports are not enough, the assistant can ask the app for specific data: movements filtered by category, account, dates or text, totals by month, category, account or weekday, and one day\'s detail. The app runs these read-only lookups on this computer, loads up to 24 months from the phone when needed, and shows which lookups were used under each answer. Nothing is ever changed.') }}</dd>
+        <dt>{{ t('What is shared') }}</dt>
+        <dd>{{ t('Totals, categories, dates and the same figures Analysis shows. Shop names and notes, and searching by them, are sent only if you turn on "Share transaction descriptions". The conversation, briefs and reports are not saved.') }}</dd>
       </dl>
     </div>
 
-    <h2 class="section">Changing data on the phone</h2>
+    <h2 class="section">{{ t('Changing data on the phone') }}</h2>
     <div class="card">
       <ul>
-        <li>Every change is shown for confirmation first. Deleting requires typing <code>delete</code>.</li>
-        <li>A backup from the last 30 minutes is required. One is saved automatically when you connect.</li>
-        <li>If the phone is not reachable, changes wait in <b>Pending changes</b> and are sent when it is back. Nothing is lost.</li>
-        <li>A change is never sent twice. If the phone does not answer in time, check the phone before trying again.</li>
-        <li>Demo data cannot be changed.</li>
+        <li>{{ t('Every change is shown for confirmation first. Deleting requires typing') }} <code>delete</code>.</li>
+        <li>{{ t('A backup from the last 30 minutes is required. One is saved automatically when you connect.') }}</li>
+        <li>{{ t('If the phone is not reachable, changes wait in') }} <b>{{ t('Pending changes') }}</b> {{ t('and are sent when it is back. Nothing is lost.') }}</li>
+        <li>{{ t('A change is never sent twice. If the phone does not answer in time, check the phone before trying again.') }}</li>
+        <li>{{ t('Demo data cannot be changed.') }}</li>
       </ul>
     </div>
 
-    <h2 class="section">Troubleshooting</h2>
+    <h2 class="section">{{ t('Troubleshooting') }}</h2>
     <div class="card">
       <dl>
-        <dt>The phone does not connect</dt>
-        <dd>Check that PC Manager says it is running, that both devices share the Wi-Fi, and that the address includes the port.</dd>
-        <dt>It disconnected by itself</dt>
-        <dd>The phone probably locked or switched apps. Unlock it, open Money Manager and press Reload.</dd>
-        <dt>Net worth differs from the phone</dt>
-        <dd>Review <button class="link" @click="nav.go('settings', 'accounts')">Settings → Accounts</button>: which accounts count and their currency rates.</dd>
+        <dt>{{ t('The phone does not connect') }}</dt>
+        <dd>{{ t('Check that PC Manager says it is running, that both devices share the Wi-Fi, and that the address includes the port.') }}</dd>
+        <dt>{{ t('It disconnected by itself') }}</dt>
+        <dd>{{ t('The phone probably locked or switched apps. Unlock it, open Money Manager and press Reload.') }}</dd>
+        <dt>{{ t('Net worth differs from the phone') }}</dt>
+        <dd>{{ t('Review') }} <button class="link" @click="nav.go('settings', 'accounts')">{{ t('Settings → Accounts') }}</button>: {{ t('which accounts count and their currency rates.') }}</dd>
       </dl>
     </div>
   </section>
