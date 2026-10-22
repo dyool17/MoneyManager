@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { t, intlLocale } from '../../i18n'
 import { useSort } from '../../composables/sort'
 import { formatMoney } from '../../domain/format'
 import { filterAccountRows, type AccountFilter, type AccountRow } from '../../domain/money'
@@ -22,27 +23,27 @@ const sort = useSort(visible, {
 </script>
 
 <template>
-  <section class="card" aria-label="Accounts">
+  <section class="card" :aria-label="t('Accounts')">
     <div class="card-head">
-      <h2>Accounts</h2>
+      <h2>{{ t('Accounts') }}</h2>
       <div class="acts">
         <template v-if="canAdd">
-          <button @click="$emit('add-account')">Add account</button>
-          <button @click="$emit('add-card')">Add card</button>
+          <button @click="$emit('add-account')">{{ t('Add account') }}</button>
+          <button @click="$emit('add-card')">{{ t('Add card') }}</button>
         </template>
-        <div class="seg" role="group" aria-label="Filter accounts">
-          <button v-for="f in FILTERS" :key="f.id" type="button" :aria-pressed="filter === f.id" @click="filter = f.id">{{ f.label }}</button>
+        <div class="seg" role="group" :aria-label="t('Filter accounts')">
+          <button v-for="f in FILTERS" :key="f.id" type="button" :aria-pressed="filter === f.id" @click="filter = f.id">{{ t(f.label) }}</button>
         </div>
       </div>
     </div>
-    <p v-if="!visible.length" class="muted">No accounts found.</p>
+    <p v-if="!visible.length" class="muted">{{ t('No accounts found.') }}</p>
     <div v-else class="scroll">
       <table>
         <thead><tr>
-          <SortTh :sort="sort" by="name">Account</SortTh>
-          <SortTh :sort="sort" by="type">Type</SortTh>
-          <SortTh :sort="sort" by="share">Share</SortTh>
-          <SortTh :sort="sort" by="balance" num>Balance</SortTh>
+          <SortTh :sort="sort" by="name">{{ t('Account') }}</SortTh>
+          <SortTh :sort="sort" by="type">{{ t('Type') }}</SortTh>
+          <SortTh :sort="sort" by="share">{{ t('Share') }}</SortTh>
+          <SortTh :sort="sort" by="balance" num>{{ t('Balance') }}</SortTh>
         </tr></thead>
         <tbody>
           <tr v-for="r in sort.sorted.value" :key="r.id" :class="{ on: r.id === selected }" :aria-selected="r.id === selected">
@@ -51,10 +52,10 @@ const sort = useSort(visible, {
                 <span class="dot" :style="{ background: r.color ?? 'var(--neutral-mark)' }" aria-hidden="true" />{{ r.name }}
               </button>
             </th>
-            <td class="muted">{{ r.type }}</td>
+            <td class="muted">{{ r.kind === 'card' ? t('Credit card') : r.type }}</td>
             <td class="share">
               <div class="track" aria-hidden="true"><span :style="{ width: `${r.share}%`, background: r.balance < 0 ? 'var(--expense)' : undefined }" /></div>
-              <span class="muted num">{{ Math.round(r.share) }}%</span>
+              <span class="muted num">{{ Math.round(r.share).toLocaleString(intlLocale()) }}%</span>
             </td>
             <td :class="['num', 'bal', r.balance < 0 ? 'expense' : '']">{{ formatMoney(r.balance) }}</td>
           </tr>

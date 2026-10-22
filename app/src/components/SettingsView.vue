@@ -6,7 +6,7 @@ import AccountMetadataView from './AccountMetadataView.vue'
 import AiSettings from './AiSettings.vue'
 import PendingChanges from './PendingChanges.vue'
 import { applyTheme, savedTheme, type Theme } from '../composables/theme'
-import { locale, setLocale, type Locale } from '../i18n'
+import { t, locale, setLocale, type Locale } from '../i18n'
 
 const LANGUAGES: { id: Locale; label: string }[] = [
   { id: 'es', label: 'Español' },
@@ -25,16 +25,16 @@ const tab = ref<Tab>('phone')
 watch(() => nav.section, (s) => { if (TABS.some((t) => t.id === s)) tab.value = s as Tab }, { immediate: true })
 
 const theme = ref<Theme>(savedTheme())
-const themeLabel = computed(() => ({ system: 'Follow the system', light: 'Light', dark: 'Dark' })[theme.value])
+const themeLabel = computed(() => ({ system: t('Follow the system'), light: t('Light'), dark: t('Dark') })[theme.value])
 watch(theme, (t) => applyTheme(t, true))
 </script>
 
 
 <template>
   <section class="settings">
-    <h1>Settings</h1>
-    <div class="seg" role="tablist" aria-label="Settings sections">
-      <button v-for="t in TABS" :key="t.id" type="button" role="tab" :aria-selected="tab === t.id" @click="tab = t.id">{{ t.label }}</button>
+    <h1>{{ t('Settings') }}</h1>
+    <div class="seg" role="tablist" :aria-label="t('Settings sections')">
+      <button v-for="item in TABS" :key="item.id" type="button" role="tab" :aria-selected="tab === item.id" @click="tab = item.id">{{ t(item.label) }}</button>
     </div>
 
     <div v-if="tab === 'phone'" class="stack">
@@ -43,17 +43,17 @@ watch(theme, (t) => applyTheme(t, true))
     </div>
     <div v-else-if="tab === 'accounts'" class="card"><AccountMetadataView /></div>
     <div v-else-if="tab === 'ai'" class="card">
-      <h2>Assistant</h2>
-      <p class="muted">The assistant explains your reports and answers questions. Figures always come from the app's own calculations, and nothing on the phone changes without your confirmation.</p>
+      <h2>{{ t('Assistant') }}</h2>
+      <p class="muted">{{ t("The assistant explains your reports and answers questions. Figures always come from the app's own calculations, and nothing on the phone changes without your confirmation.") }}</p>
       <AiSettings />
     </div>
     <div v-else class="card">
-      <h2>Appearance</h2>
+      <h2>{{ t('Appearance') }}</h2>
       <fieldset class="themes">
-        <legend class="muted">Theme · {{ themeLabel }}</legend>
+        <legend class="muted">{{ t('Theme') }} · {{ themeLabel }}</legend>
         <label v-for="th in (['system', 'light', 'dark'] as const)" :key="th">
           <input v-model="theme" type="radio" name="theme" :value="th" />
-          {{ { system: 'Follow the system', light: 'Light', dark: 'Dark' }[th] }}
+          {{ { system: t('Follow the system'), light: t('Light'), dark: t('Dark') }[th] }}
         </label>
       </fieldset>
       <fieldset class="themes language">

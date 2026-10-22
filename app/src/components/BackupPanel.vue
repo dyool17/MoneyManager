@@ -1,24 +1,25 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { t, intlLocale } from '../i18n'
 import { useSession } from '../stores/session'
 
 const session = useSession()
 const report = computed(() => session.backup)
 
-const kb = (bytes: number) => `${Math.max(1, Math.round(bytes / 1024))} KB`
+const kb = (bytes: number) => `${Math.max(1, Math.round(bytes / 1024)).toLocaleString(intlLocale())} KB`
 
 const sqliteMessage = computed(() => {
   const s = report.value?.sqlite
   if (!s) return ''
   switch (s.status) {
     case 'saved':
-      return `Full backup saved (money.sqlite, ${kb(s.bytes)}). You can restore it from the phone app.`
+      return t('Full backup saved (money.sqlite, {size}). You can restore it from the phone app.', { size: kb(s.bytes) })
     case 'empty':
-      return 'The phone sent an empty full backup, so it was not saved. Only the readable snapshot is available.'
+      return t('The phone sent an empty full backup, so it was not saved. Only the readable snapshot is available.')
     case 'not-sqlite':
-      return 'The phone sent something that is not a Money Manager backup, so it was not saved. Only the readable snapshot is available.'
+      return t('The phone sent something that is not a Money Manager backup, so it was not saved. Only the readable snapshot is available.')
     case 'failed':
-      return `The full backup could not be downloaded: ${s.reason}. Only the readable snapshot is available.`
+      return t('The full backup could not be downloaded: {error}. Only the readable snapshot is available.', { error: t(s.reason) })
   }
   return ''
 })
@@ -26,29 +27,28 @@ const sqliteMessage = computed(() => {
 
 <template>
   <section class="backup" aria-live="polite">
-    <h2>Backup</h2>
-    <p v-if="session.source !== 'phone'" class="muted">Backups are taken automatically each time you connect your phone.</p>
+    <h2>{{ t('Backup') }}</h2>
+    <p v-if="session.source !== 'phone'" class="muted">{{ t('Backups are taken automatically each time you connect your phone.') }}</p>
     <template v-else>
-      <p v-if="session.backupState === 'running'" class="muted">Saving a backup of your phone…</p>
-      <p v-else-if="session.backupState === 'failed'" class="warn">Backup not saved: {{ session.backupError }}</p>
+      <p v-if="session.backupState === 'running'" class="muted">{{ t('Saving a backup of your phone…') }}</p>
+      <p v-else-if="session.backupState === 'failed'" class="warn">{{ t('Backup not saved: {error}', { error: t(session.backupError ?? '') }) }}</p>
       <template v-else-if="report">
         <p :class="report.sqlite.status === 'saved' ? 'ok' : 'warn'">{{ sqliteMessage }}</p>
         <p class="muted">
-          Snapshot: {{ report.snapshot.length }} files
-          <template v-if="report.snapshotErrors.length">, {{ report.snapshotErrors.length }} could not be read</template>.
-          Saved {{ new Date(report.createdAt).toLocaleString() }} in
+          {{ t('Snapshot: {n} files', { n: report.snapshot.length.toLocaleString(intlLocale()) }) }}<template v-if="report.snapshotErrors.length">{{ t(', {n} could not be read', { n: report.snapshotErrors.length.toLocaleString(intlLocale()) }) }}</template>.
+          {{ t('Saved {date} in', { date: new Date(report.createdAt).toLocaleString(intlLocale()) }) }}
         </p>
         <code>{{ report.folder }}</code>
         <details v-if="report.sqlite.status === 'saved'">
-          <summary>How to restore</summary>
+          <summary>{{ t('How to restore') }}</summary>
           <ol>
-            <li>Copy <code>money.sqlite</code> from the folder above to your phone.</li>
-            <li>In Money Manager on the phone, open the backup settings and restore from that file.</li>
-            <li>The phone returns to exactly how it was when this backup was taken.</li>
+            <li>{{ t('Copy {file} from the folder above to your phone.', { file: 'money.sqlite' }) }}</li>
+            <li>{{ t('In Money Manager on the phone, open the backup settings and restore from that file.') }}</li>
+            <li>{{ t('The phone returns to exactly how it was when this backup was taken.') }}</li>
           </ol>
         </details>
       </template>
-      <button :disabled="session.backupState === 'running'" @click="session.backupNow()">Back up now</button>
+      <button :disabled="session.backupState === 'running'" @click="session.backupNow()">{{ t('Back up now') }}</button>
     </template>
   </section>
 </template>

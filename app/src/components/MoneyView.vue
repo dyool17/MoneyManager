@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { t, intlLocale } from '../i18n'
 import { useSession } from '../stores/session'
 import { useAccountMetadata } from '../stores/metadata'
 import { useNav } from '../stores/nav'
@@ -32,17 +33,17 @@ function remove() {
 
 <template>
   <section class="money">
-    <h1>Money</h1>
-    <p v-if="metadata.storageError" role="alert" class="warn">{{ metadata.storageError }}</p>
+    <h1>{{ t('Money') }}</h1>
+    <p v-if="metadata.storageError" role="alert" class="warn">{{ t(metadata.storageError) }}</p>
     <p v-if="metadata.changedAccounts.length" role="status" class="warn">
-      Accounts changed since import. Review metadata or import a fresh backup.
-      <button @click="nav.go('settings', 'accounts')">Review account settings</button>
+      {{ t('Accounts changed since import. Review metadata or import a fresh backup.') }}
+      <button @click="nav.go('settings', 'accounts')">{{ t('Review account settings') }}</button>
     </p>
     <p v-if="metadata.totals.missing.length && session.dashboard" role="status" class="warn">
-      {{ metadata.totals.missing.length }} account(s) are missing configuration, so totals may be incomplete.
-      <button @click="nav.go('settings', 'accounts')">Configure accounts</button>
+      {{ t('{n} account(s) are missing configuration, so totals may be incomplete.', { n: metadata.totals.missing.length.toLocaleString(intlLocale()) }) }}
+      <button @click="nav.go('settings', 'accounts')">{{ t('Configure accounts') }}</button>
     </p>
-    <p v-if="session.source === 'phone'" class="muted">Current totals use live balances and account metadata.</p>
+    <p v-if="session.source === 'phone'" class="muted">{{ t('Current totals use live balances and account metadata.') }}</p>
 
     <NetWorthHero @configure="nav.go('settings', 'accounts')" />
 

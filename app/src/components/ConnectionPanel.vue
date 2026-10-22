@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { t } from '../i18n'
 import { useSession } from '../stores/session'
 import BackupPanel from './BackupPanel.vue'
 
@@ -16,23 +17,23 @@ async function connect(source: 'demo' | 'phone') {
 
 <template>
   <section class="panel">
-    <h1>Connect your phone</h1>
+    <h1>{{ t('Connect your phone') }}</h1>
     <ol>
-      <li>Open Money Manager on your phone.</li>
-      <li>Go to More, then PC Manager, and tap Start.</li>
-      <li>Keep the phone and this computer on the same Wi-Fi.</li>
-      <li>Type the address the phone shows, including the port.</li>
+      <li>{{ t('Open Money Manager on your phone.') }}</li>
+      <li>{{ t('Go to More, then PC Manager, and tap Start.') }}</li>
+      <li>{{ t('Keep the phone and this computer on the same Wi-Fi.') }}</li>
+      <li>{{ t('Type the address the phone shows, including the port.') }}</li>
     </ol>
     <form @submit.prevent="connect('phone')">
-      <label for="address">Phone address</label>
+      <label for="address">{{ t('Phone address') }}</label>
       <div class="row">
         <input id="address" v-model="address" placeholder="http://192.168.1.161:8080" autocomplete="off" spellcheck="false" />
-        <button class="primary" type="submit" :disabled="session.status === 'loading'">Connect</button>
+        <button class="primary" type="submit" :disabled="session.status === 'loading'">{{ t('Connect') }}</button>
       </div>
     </form>
     <p class="alt">
-      No phone nearby?
-      <button type="button" @click="connect('demo')">Use demo data</button>
+      {{ t('No phone nearby?') }}
+      <button type="button" @click="connect('demo')">{{ t('Use demo data') }}</button>
     </p>
     <BackupPanel />
   </section>

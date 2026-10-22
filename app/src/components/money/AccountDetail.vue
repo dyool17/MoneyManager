@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, shallowRef, ref, watch } from 'vue'
+import { t, intlLocale } from '../../i18n'
 import { useSession } from '../../stores/session'
 import { useAccountMetadata } from '../../stores/metadata'
 import { useNav } from '../../stores/nav'
-import { formatMoney } from '../../domain/format'
+import { formatMoney, monthLabel } from '../../domain/format'
 import { accountFlow, type AccountRow } from '../../domain/money'
 import type { MonthPoint } from '../../domain/types'
 import LineChart from '../LineChart.vue'
@@ -37,49 +38,49 @@ watch(() => props.account.id, async (id) => {
 const flow = computed(() => accountFlow(session.movements, props.account.id))
 const counted = computed(() => {
   const s = metadata.settingsFor(props.account.id)
-  return s ? (s.includeInTotals ? 'Yes' : 'No') : 'Not configured'
+  return s ? (s.includeInTotals ? t('Yes') : t('No')) : t('Not configured')
 })
 const isCard = computed(() => props.account.kind === 'card')
 const linkedName = computed(() => session.assets.flatMap((g) => g.items).find((i) => i.id === props.account.linkedAssetId)?.name ?? props.account.linkedAssetId)
 </script>
 
 <template>
-  <aside class="card detail" aria-label="Account detail">
-    <div class="label">{{ account.type }}</div>
+  <aside class="card detail" :aria-label="t('Account detail')">
+    <div class="label">{{ isCard ? t('Credit card') : account.type }}</div>
     <h2>{{ account.name }}</h2>
     <div :class="['num', 'big', account.balance < 0 ? 'expense' : '']">{{ formatMoney(account.balance) }}</div>
 
     <template v-if="isCard">
-      <p v-if="linkedName" class="muted">Paid from {{ linkedName }}</p>
+      <p v-if="linkedName" class="muted">{{ t('Paid from {name}', { name: linkedName }) }}</p>
       <dl>
-        <div><dt class="label">To pay</dt><dd class="num expense">{{ formatMoney(account.balance) }}</dd></div>
-        <div v-if="account.closingDay"><dt class="label">Statement closes</dt><dd>Day {{ account.closingDay }}</dd></div>
-        <div v-if="account.paymentDay"><dt class="label">Payment due</dt><dd>Day {{ account.paymentDay }}</dd></div>
+        <div><dt class="label">{{ t('To pay') }}</dt><dd class="num expense">{{ formatMoney(account.balance) }}</dd></div>
+        <div v-if="account.closingDay"><dt class="label">{{ t('Statement closes') }}</dt><dd>{{ t('Day {n}', { n: Number(account.closingDay).toLocaleString(intlLocale()) }) }}</dd></div>
+        <div v-if="account.paymentDay"><dt class="label">{{ t('Payment due') }}</dt><dd>{{ t('Day {n}', { n: Number(account.paymentDay).toLocaleString(intlLocale()) }) }}</dd></div>
       </dl>
     </template>
 
     <div class="chart">
-      <div class="label">Balance by month</div>
-      <p v-if="trendError" class="error">Could not load the trend: {{ trendError }}</p>
-      <p v-else-if="trendLoading && !trend.length" class="muted">Loading…</p>
-      <LineChart v-else-if="trend.length" :points="trend.map((p) => ({ label: p.month, value: p.value }))" :color="account.color" :label="`${account.name} balance by month`" />
-      <p v-else class="muted">No history for this account.</p>
+      <div class="label">{{ t('Balance by month') }}</div>
+      <p v-if="trendError" class="error">{{ t('Could not load the trend: {error}', { error: t(trendError) }) }}</p>
+      <p v-else-if="trendLoading && !trend.length" class="muted">{{ t('Loading…') }}</p>
+      <LineChart v-else-if="trend.length" :points="trend.map((p) => ({ label: /^\d{4}-\d{2}/.test(p.month) ? monthLabel(p.month) : p.month, value: p.value }))" :color="account.color" :label="t('{name} balance by month', { name: account.name })" />
+      <p v-else class="muted">{{ t('No history for this account.') }}</p>
     </div>
 
     <dl>
-      <div><dt class="label">In this month</dt><dd class="num income">{{ formatMoney(flow.in) }}</dd></div>
-      <div><dt class="label">Out this month</dt><dd class="num expense">{{ formatMoney(flow.out) }}</dd></div>
-      <div><dt class="label">Counts toward totals</dt><dd>{{ counted }}</dd></div>
+      <div><dt class="label">{{ t('In this month') }}</dt><dd class="num income">{{ formatMoney(flow.in) }}</dd></div>
+      <div><dt class="label">{{ t('Out this month') }}</dt><dd class="num expense">{{ formatMoney(flow.out) }}</dd></div>
+      <div><dt class="label">{{ t('Counts toward totals') }}</dt><dd>{{ counted }}</dd></div>
     </dl>
 
     <div class="acts">
-      <button class="primary" @click="nav.go('spending', `account:${account.id}`)">See transactions</button>
-      <button @click="nav.go('settings', 'accounts')">Account settings</button>
-      <AiButton :question="`Tell me about my ${account.name} account`" :about="`${account.name} account`">Ask about this account</AiButton>
+      <button class="primary" @click="nav.go('spending', `account:${account.id}`)">{{ t('See transactions') }}</button>
+      <button @click="nav.go('settings', 'accounts')">{{ t('Account settings') }}</button>
+      <AiButton :question="t('Tell me about my {name} account', { name: account.name })" :about="t('{name} account', { name: account.name })">{{ t('Ask about this account') }}</AiButton>
     </div>
     <div v-if="session.source === 'phone'" class="acts">
-      <button @click="$emit('edit')">Edit</button>
-      <button class="danger-btn" @click="$emit('remove')">Delete</button>
+      <button @click="$emit('edit')">{{ t('Edit') }}</button>
+      <button class="danger-btn" @click="$emit('remove')">{{ t('Delete') }}</button>
     </div>
   </aside>
 </template>
