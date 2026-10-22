@@ -1,11 +1,19 @@
-const money = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+import { intlLocale } from '../i18n'
+
+const formats = new Map<string, Intl.NumberFormat>()
+const money = () => {
+  const l = intlLocale()
+  let f = formats.get(l)
+  if (!f) formats.set(l, (f = new Intl.NumberFormat(l, { minimumFractionDigits: 2, maximumFractionDigits: 2 })))
+  return f
+}
 
 // `+ 0` turns -0 into 0 so zero balances never show as "-0.00".
-export const formatMoney = (n: number) => money.format(n + 0)
+export const formatMoney = (n: number) => money().format(n + 0)
 
 export function formatDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+  return new Date(y, m - 1, d).toLocaleDateString(intlLocale(), { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 /** Shifts a whole-month period by `delta` months. */
@@ -20,5 +28,5 @@ export function shiftMonth(startDate: string, delta: number) {
 
 export function monthLabel(startDate: string): string {
   const [y, m] = startDate.split('-').map(Number)
-  return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+  return new Date(y, m - 1, 1).toLocaleDateString(intlLocale(), { month: 'long', year: 'numeric' })
 }

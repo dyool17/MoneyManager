@@ -6,6 +6,12 @@ import AccountMetadataView from './AccountMetadataView.vue'
 import AiSettings from './AiSettings.vue'
 import PendingChanges from './PendingChanges.vue'
 import { applyTheme, savedTheme, type Theme } from '../composables/theme'
+import { locale, setLocale, type Locale } from '../i18n'
+
+const LANGUAGES: { id: Locale; label: string }[] = [
+  { id: 'es', label: 'Español' },
+  { id: 'en', label: 'English' },
+]
 
 type Tab = 'phone' | 'accounts' | 'ai' | 'appearance'
 const TABS: { id: Tab; label: string }[] = [
@@ -45,9 +51,16 @@ watch(theme, (t) => applyTheme(t, true))
       <h2>Appearance</h2>
       <fieldset class="themes">
         <legend class="muted">Theme · {{ themeLabel }}</legend>
-        <label v-for="t in (['system', 'light', 'dark'] as const)" :key="t">
-          <input v-model="theme" type="radio" name="theme" :value="t" />
-          {{ { system: 'Follow the system', light: 'Light', dark: 'Dark' }[t] }}
+        <label v-for="th in (['system', 'light', 'dark'] as const)" :key="th">
+          <input v-model="theme" type="radio" name="theme" :value="th" />
+          {{ { system: 'Follow the system', light: 'Light', dark: 'Dark' }[th] }}
+        </label>
+      </fieldset>
+      <fieldset class="themes language">
+        <legend class="muted">Language · Idioma</legend>
+        <label v-for="l in LANGUAGES" :key="l.id">
+          <input type="radio" name="language" :value="l.id" :checked="locale === l.id" @change="setLocale(l.id)" />
+          {{ l.label }}
         </label>
       </fieldset>
     </div>
@@ -63,6 +76,7 @@ h2 { margin: 0 0 0.4rem; font-size: 1.05rem; }
 .card > .muted { margin: 0 0 1rem; }
 .themes { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.6rem; }
 .themes legend { margin-bottom: 0.6rem; }
+.language { margin-top: 1.2rem; }
 .themes label { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.9rem; border: 1px solid var(--rule); border-radius: 10px; cursor: pointer; }
 .themes label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 </style>

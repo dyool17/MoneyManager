@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { useChat } from './chat'
 import { useSession } from './session'
+import { languageName } from '../i18n'
 
 /**
  * The AI brief on Today. Written once per set of reports and kept in memory
@@ -29,10 +30,10 @@ export const useBrief = defineStore('brief', () => {
     state.value = 'loading'
     error.value = null
     try {
-      const language = typeof navigator !== 'undefined' ? navigator.language : 'en'
+      const language = languageName()
       text.value = await chat.oneShot(
         `Today is ${today}. Write my brief for this month in exactly three short sentences: where I stand now, how the month is projected to close, and the main reason. ` +
-        `Use only figures from the reports, rounded to whole units with the currency symbol. Plain prose: no headings, lists or questions. Write in the language of this locale: ${language}.`,
+        `Use only figures from the reports, rounded to whole units with the currency symbol. Plain prose: no headings, lists or questions. Write in ${language}.`,
       )
       writtenFor = chat.context
       state.value = 'ready'

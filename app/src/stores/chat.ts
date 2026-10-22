@@ -8,6 +8,7 @@ import { useSession } from './session'
 import { useAccountMetadata } from './metadata'
 import { useLifeEvents } from './life-events'
 import { useLiquid } from '../composables/liquid'
+import { languageName } from '../i18n'
 
 const SETTINGS_KEY = 'mm.chatSettings'
 export const DEFAULT_BASE_URL = 'https://opencode.ai/zen/go/v1'
@@ -121,7 +122,7 @@ export const useChat = defineStore('chat', () => {
   async function converse(transcript: AiMessage[], focus?: string | null, onLookup?: (what: string | null) => void) {
     const s = settings.value
     const where = focus ? `\n\nThe user is looking at: ${focus}. Answer about that first.` : ''
-    const system = `${systemPrompt(context.value)}\n\n${QUERY_GUIDE}${where}`
+    const system = `${systemPrompt(context.value)}\n\n${QUERY_GUIDE}${where}\n\nThe app is set to ${languageName()}; use it when the user's language is unclear.`
     const lookups: string[] = []
     const ask = () => aiChat({
       provider: s.provider, system, messages: transcript,
