@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { t } from '../i18n'
 import { useHistory } from '../stores/history'
 import { useSession } from '../stores/session'
 import { useNav } from '../stores/nav'
@@ -17,6 +18,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'opportunities', label: 'Opportunities' },
   { id: 'patterns', label: 'Patterns' },
 ]
+const tabLabel = (id: Tab) => ({ overview: t('Overview'), risks: t('Risks'), opportunities: t('Opportunities'), patterns: t('Patterns') })[id]
 const RANGES = [3, 6, 12] as const
 
 const history = useHistory()
@@ -54,34 +56,34 @@ onMounted(() => { if (history.state === 'idle') loadFromSession() })
   <section class="analysis">
     <header class="an-top">
       <div>
-        <h1>Analysis</h1>
+        <h1>{{ t('Analysis') }}</h1>
         <p class="muted an-sub">
           <template v-if="history.state === 'ready'">
-            {{ history.source === 'backup' ? 'From a backup file' : session.source === 'demo' ? 'From demo data' : 'Live from your phone' }}
+            {{ history.source === 'backup' ? t('From a backup file') : session.source === 'demo' ? t('From demo data') : t('Live from your phone') }}
             · {{ formatDate(first) }} – {{ formatDate(history.span.last) }}
           </template>
-          <template v-else-if="history.state === 'loading'">Reading your history…</template>
-          <template v-else>Health, risks, opportunities and patterns.</template>
+          <template v-else-if="history.state === 'loading'">{{ t('Reading your history…') }}</template>
+          <template v-else>{{ t('Health, risks, opportunities and patterns.') }}</template>
         </p>
       </div>
       <div class="an-controls">
-        <div class="seg" role="group" aria-label="Range">
+        <div class="seg" role="group" :aria-label="t('Range')">
           <button v-for="n in RANGES" :key="n" type="button" :aria-pressed="range === n" @click="range = n">{{ n }}M</button>
         </div>
-        <button type="button" :disabled="history.state === 'loading'" @click="loadFromSession">Reload</button>
-        <button type="button" @click="fileInput?.click()">Open backup…</button>
+        <button type="button" :disabled="history.state === 'loading'" @click="loadFromSession">{{ t('Reload') }}</button>
+        <button type="button" @click="fileInput?.click()">{{ t('Open backup…') }}</button>
         <input ref="fileInput" type="file" accept=".mmbak,.sqlite" hidden @change="onFile" />
       </div>
     </header>
 
-    <div class="seg an-tabs" role="tablist" aria-label="Analysis sections">
-      <button v-for="t in TABS" :id="`an-tab-${t.id}`" :key="t.id" type="button" role="tab" :aria-selected="tab === t.id" :aria-controls="`an-panel-${t.id}`" @click="tab = t.id">{{ t.label }}</button>
+    <div class="seg an-tabs" role="tablist" :aria-label="t('Analysis sections')">
+      <button v-for="item in TABS" :id="`an-tab-${item.id}`" :key="item.id" type="button" role="tab" :aria-selected="tab === item.id" :aria-controls="`an-panel-${item.id}`" @click="tab = item.id">{{ tabLabel(item.id) }}</button>
     </div>
 
     <p v-if="history.state === 'failed'" class="an-error" role="alert">
-      Could not read the history: {{ history.error }}. Connect the phone and press Reload, or open a backup.
+      {{ t('Could not read the history: {error}. Connect the phone and press Reload, or open a backup.', { error: history.error ?? '' }) }}
     </p>
-    <p v-else-if="!r && history.state !== 'loading'" class="muted">No history loaded yet. Connect the phone or open a backup.</p>
+    <p v-else-if="!r && history.state !== 'loading'" class="muted">{{ t('No history loaded yet. Connect the phone or open a backup.') }}</p>
 
     <div v-if="r" :id="`an-panel-${tab}`" role="tabpanel" :aria-labelledby="`an-tab-${tab}`" class="an-panel">
       <OverviewTab v-if="tab === 'overview'" :r="r" :first="first" :last="last" @tab="tab = $event" />

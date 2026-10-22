@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { t, intlLocale } from '../../i18n'
 import Icon from '../Icon.vue'
 import { useChat } from '../../stores/chat'
 import { useNav } from '../../stores/nav'
@@ -16,7 +17,7 @@ const ai = useAiText()
 
 const closed = computed(() => props.months.filter((m) => m.month < props.today.slice(0, 7)))
 const month = computed(() => closed.value[closed.value.length - 1] ?? null)
-const name = computed(() => (month.value ? new Date(`${month.value.month}-15T12:00:00`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : ''))
+const name = computed(() => (month.value ? new Date(`${month.value.month}-15T12:00:00`).toLocaleDateString(intlLocale(), { month: 'long', year: 'numeric' }) : ''))
 const rank = computed(() => {
   if (!month.value) return 0
   return [...closed.value].sort((a, b) => a.net - b.net).findIndex((m) => m.month === month.value!.month) + 1
@@ -24,37 +25,37 @@ const rank = computed(() => {
 const headline = computed(() => {
   const m = month.value
   if (!m) return ''
-  if (!m.income && !m.expense) return `No movements were recorded in ${name.value}.`
-  const place = rank.value === 1 ? 'the worst month in this period' : rank.value === 2 ? 'the second worst month in this period' : rank.value === closed.value.length ? 'the best month in this period' : ''
+  if (!m.income && !m.expense) return t('No movements were recorded in {month}.', { month: name.value })
+  const place = rank.value === 1 ? t('the worst month in this period') : rank.value === 2 ? t('the second worst month in this period') : rank.value === closed.value.length ? t('the best month in this period') : ''
   return m.net < 0
-    ? `${name.value} closed ${formatMoney(-m.net)} in the red${place ? `, ${place}` : ''}.`
-    : `${name.value} closed with ${formatMoney(m.net)} left over${place ? `, ${place}` : ''}.`
+    ? t('{month} closed {amount} in the red{place}.', { month: name.value, amount: formatMoney(-m.net), place: place ? `, ${place}` : '' })
+    : t('{month} closed with {amount} left over{place}.', { month: name.value, amount: formatMoney(m.net), place: place ? `, ${place}` : '' })
 })
 const key = computed(() => `report:${month.value?.month}:${chat.context.length}`)
 const report = computed(() => ai.get(key.value))
 function write() {
-  const language = typeof navigator !== 'undefined' ? navigator.language : 'en'
+  const language = intlLocale()
   ai.write(key.value,
     `Write my report for ${month.value!.month}: three short bullet points on what happened that month (income, spending, the categories that moved most against earlier months), then one line starting with "Next:" with the single most useful action. ` +
     `Use only figures from the reports or from lookups. Write in the language of this locale: ${language}.`,
-    `Report for ${name.value}`)
+    t('Report for {month}', { month: name.value }))
 }
 </script>
 
 <template>
-  <section v-if="month" class="card report ai-surface" aria-label="Monthly report">
+  <section v-if="month" class="card report ai-surface" :aria-label="t('Monthly report')">
     <div class="head">
-      <span class="tag"><Icon name="sparkle" :size="14" />{{ name }} report</span>
-      <button v-if="chat.ready && report.state === 'ready'" type="button" class="quiet" @click="write">Rewrite</button>
+      <span class="tag"><Icon name="sparkle" :size="14" />{{ t('{month} report', { month: name }) }}</span>
+      <button v-if="chat.ready && report.state === 'ready'" type="button" class="quiet" @click="write">{{ t('Rewrite') }}</button>
     </div>
     <h2>{{ headline }}</h2>
-    <p class="muted">Income {{ formatMoney(month.income) }} · spending {{ formatMoney(month.expense) }}</p>
+    <p class="muted">{{ t('Income {income} · spending {expense}', { income: formatMoney(month.income), expense: formatMoney(month.expense) }) }}</p>
     <div v-if="report.state === 'ready'" class="md" v-html="renderMarkdown(report.text)" />
-    <p v-else-if="report.state === 'loading'" class="muted">Writing the report…</p>
-    <p v-else-if="report.state === 'failed'" class="muted">The assistant could not write the report: {{ report.error }}</p>
+    <p v-else-if="report.state === 'loading'" class="muted">{{ t('Writing the report…') }}</p>
+    <p v-else-if="report.state === 'failed'" class="muted">{{ t('The assistant could not write the report: {error}', { error: report.error }) }}</p>
     <div v-if="chat.ready" class="actions">
-      <button v-if="report.state !== 'ready' && report.state !== 'loading'" type="button" @click="write">Write the report</button>
-      <button type="button" class="quiet" @click="nav.ask(`Let's talk about ${name}. What should I learn from it?`, `Report for ${name}`)">Discuss in chat</button>
+      <button v-if="report.state !== 'ready' && report.state !== 'loading'" type="button" @click="write">{{ t('Write the report') }}</button>
+      <button type="button" class="quiet" @click="nav.ask(t('Let’s talk about {month}. What should I learn from it?', { month: name }), t('Report for {month}', { month: name }))">{{ t('Discuss in chat') }}</button>
     </div>
   </section>
 </template>
