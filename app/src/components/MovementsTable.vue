@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { t, intlLocale } from '../i18n'
 import { useSort } from '../composables/sort'
 import SortTh from './SortTh.vue'
 import { useSession } from '../stores/session'
@@ -56,33 +57,33 @@ async function exportFiltered() {
 }
 
 const accountName = (id?: string) => session.init?.accounts.find((a) => a.id === id)?.name ?? id
-const typeLabel = (m: Movement) => (m.type === 'unknown' ? `Other (code ${m.rawCode})` : TYPE_LABEL[m.type])
+const typeLabel = (m: Movement) => (m.type === 'unknown' ? t('Other (code {code})', { code: m.rawCode }) : t(TYPE_LABEL[m.type]))
 </script>
 
 <template>
   <section class="card">
     <div class="head">
-      <h2>Movements</h2>
-      <span class="count muted">{{ filtered.length }} of {{ session.movements.length }}</span>
-      <input v-model="text" type="search" placeholder="Search notes" aria-label="Search notes" />
-      <button :disabled="!filtered.length || exportState.kind === 'saving'" @click="exportFiltered">Export CSV</button>
+      <h2>{{ t('Movements') }}</h2>
+      <span class="count muted">{{ t('{n} of {total}', { n: filtered.length.toLocaleString(intlLocale()), total: session.movements.length.toLocaleString(intlLocale()) }) }}</span>
+      <input v-model="text" type="search" :placeholder="t('Search notes')" :aria-label="t('Search notes')" />
+      <button :disabled="!filtered.length || exportState.kind === 'saving'" @click="exportFiltered">{{ t('Export CSV') }}</button>
     </div>
-    <p v-if="exportState.kind === 'saved'" class="export ok" role="status">Saved {{ filtered.length }} transactions to <code>{{ exportState.text }}</code></p>
-    <p v-else-if="exportState.kind === 'failed'" class="export warn" role="alert">Export failed: {{ exportState.text }}</p>
+    <p v-if="exportState.kind === 'saved'" class="export ok" role="status">{{ t('Saved {n} transactions to', { n: filtered.length.toLocaleString(intlLocale()) }) }} <code>{{ exportState.text }}</code></p>
+    <p v-else-if="exportState.kind === 'failed'" class="export warn" role="alert">{{ t('Export failed: {error}', { error: t(exportState.text ?? '') }) }}</p>
 
-    <p v-if="!session.movements.length" class="empty">No transactions this month. Try another month.</p>
-    <p v-else-if="!filtered.length" class="empty">No transactions match these filters.</p>
+    <p v-if="!session.movements.length" class="empty">{{ t('No transactions this month. Try another month.') }}</p>
+    <p v-else-if="!filtered.length" class="empty">{{ t('No transactions match these filters.') }}</p>
 
     <template v-for="group in [
       { title: 'Recorded', rows: recorded, sort: recordedSort },
       { title: 'Upcoming charges', rows: upcoming, sort: upcomingSort },
     ]" :key="group.title">
       <template v-if="group.rows.length">
-        <h3>{{ group.title }} <small v-if="group.title !== 'Recorded'">dated after today</small></h3>
+        <h3>{{ t(group.title) }} <small v-if="group.title !== 'Recorded'">{{ t('dated after today') }}</small></h3>
         <div class="scroll"><table>
           <thead>
             <tr>
-              <SortTh :sort="group.sort" by="date">Date</SortTh><SortTh :sort="group.sort" by="note">Note</SortTh><SortTh :sort="group.sort" by="category">Category</SortTh><SortTh :sort="group.sort" by="account">Account</SortTh><SortTh :sort="group.sort" by="type">Type</SortTh><SortTh :sort="group.sort" by="amount" num>Amount</SortTh><th><span class="sr">Actions</span></th>
+              <SortTh :sort="group.sort" by="date">{{ t('Date') }}</SortTh><SortTh :sort="group.sort" by="note">{{ t('Note') }}</SortTh><SortTh :sort="group.sort" by="category">{{ t('Category') }}</SortTh><SortTh :sort="group.sort" by="account">{{ t('Account') }}</SortTh><SortTh :sort="group.sort" by="type">{{ t('Type') }}</SortTh><SortTh :sort="group.sort" by="amount" num>{{ t('Amount') }}</SortTh><th><span class="sr">{{ t('Actions') }}</span></th>
             </tr>
           </thead>
           <tbody>
@@ -95,14 +96,14 @@ const typeLabel = (m: Movement) => (m.type === 'unknown' ? `Other (code ${m.rawC
               <td>{{ m.categoryName ?? '' }}<small v-if="m.subcategoryName">{{ m.subcategoryName }}</small></td>
               <td>
                 {{ m.accountName }}
-                <small v-if="m.toAssetId">{{ m.type === 'transfer-out' ? 'to' : 'from' }} {{ accountName(m.toAssetId) }}</small>
+                <small v-if="m.toAssetId">{{ m.type === 'transfer-out' ? t('to') : t('from') }} {{ accountName(m.toAssetId) }}</small>
               </td>
               <td :class="m.type">{{ typeLabel(m) }}</td>
               <td :class="['num', 'amount', m.type]">{{ formatMoney(m.amount) }}</td>
               <td class="row-actions">
                 <template v-if="session.source === 'phone'">
-                  <button v-if="m.type !== 'unknown'" class="link" :aria-label="`Edit ${m.content ?? 'transaction'}`" @click="editRow(m)">Edit</button>
-                  <button class="link danger-link" :aria-label="`Delete ${m.content ?? 'transaction'}`" @click="draft = { kind: 'delete-transactions', rows: [m] }">Delete</button>
+                  <button v-if="m.type !== 'unknown'" class="link" :aria-label="t('Edit {note}', { note: m.content ?? t('transaction') })" @click="editRow(m)">{{ t('Edit') }}</button>
+                  <button class="link danger-link" :aria-label="t('Delete {note}', { note: m.content ?? t('transaction') })" @click="draft = { kind: 'delete-transactions', rows: [m] }">{{ t('Delete') }}</button>
                 </template>
               </td>
             </tr>

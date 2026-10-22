@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { t, intlLocale } from '../i18n'
 import { useSession } from '../stores/session'
 import { useOutbox } from '../stores/outbox'
 import { useHistory } from '../stores/history'
@@ -104,7 +105,7 @@ async function askAiCategory() {
     if (!cat) { aiSuggest.value = { state: 'none' }; return }
     form.categoryId = cat.id
     form.subcategoryId = cat.subcategories.find((x) => x.name === json.subcategory)?.id ?? ''
-    aiSuggest.value = { state: 'idle', text: `Filled in by the assistant: ${[cat.name, json.subcategory].filter(Boolean).join(' › ')}. Check it before saving.` }
+    aiSuggest.value = { state: 'idle', text: [cat.name, json.subcategory].filter(Boolean).join(' › ') }
   } catch {
     aiSuggest.value = { state: 'failed' }
   }
@@ -118,7 +119,7 @@ const title = computed(() => {
   switch (d.kind) {
     case 'transaction': return isEdit.value ? 'Edit transaction' : 'Add transaction'
     case 'transfer': return isEdit.value ? 'Edit transfer' : 'Add transfer'
-    case 'delete-transactions': return d.rows.length === 1 ? 'Delete transaction' : `Delete ${d.rows.length} transactions`
+    case 'delete-transactions': return d.rows.length === 1 ? 'Delete transaction' : t('Delete {n} transactions', { n: d.rows.length.toLocaleString(intlLocale()) })
     case 'asset': return isEdit.value ? 'Edit account' : 'Add account'
     case 'delete-asset': return d.isCard ? 'Delete card' : 'Delete account'
     case 'card': return isEdit.value ? 'Edit card' : 'Add card'
@@ -197,19 +198,19 @@ const summary = computed<string[]>(() => {
     case 'update-transaction': {
       const f = op.fields
       return [
-        `${f.kind === 'income' ? 'Income' : 'Expense'} of ${formatMoney(f.amount)} on ${formatDate(f.date)}`,
-        `Account: ${f.payType}`,
-        `Category: ${f.categoryName}${f.subcategoryName ? ` / ${f.subcategoryName}` : ''}`,
-        ...(f.note ? [`Note: ${f.note}`] : []),
+        t('{kind} of {amount} on {date}', { kind: f.kind === 'income' ? t('Income') : t('Expense'), amount: formatMoney(f.amount), date: formatDate(f.date) }),
+        t('Account: {name}', { name: f.payType }),
+        t('Category: {name}', { name: `${f.categoryName}${f.subcategoryName ? ` / ${f.subcategoryName}` : ''}` }),
+        ...(f.note ? [t('Note: {note}', { note: f.note })] : []),
       ]
     }
     case 'create-transfer':
     case 'update-transfer': {
       const f = op.fields
       return [
-        `Move ${formatMoney(f.amount)} on ${formatDate(f.date)}`,
-        `From ${f.fromAssetName} to ${f.toAssetName}`,
-        ...(op.op === 'update-transfer' ? ['The phone replaces the transfer with a new one.'] : []),
+        t('Move {amount} on {date}', { amount: formatMoney(f.amount), date: formatDate(f.date) }),
+        t('From {from} to {to}', { from: f.fromAssetName, to: f.toAssetName }),
+        ...(op.op === 'update-transfer' ? [t('The phone replaces the transfer with a new one.')] : []),
       ]
     }
     case 'delete-transactions':
@@ -218,18 +219,18 @@ const summary = computed<string[]>(() => {
       )
     case 'create-asset':
     case 'update-asset':
-      return [`${op.fields.name} in ${op.fields.groupName}`, `Balance: ${formatMoney(op.fields.balance)}`]
+      return [t('{name} in {group}', { name: op.fields.name, group: op.fields.groupName }), t('Balance: {amount}', { amount: formatMoney(op.fields.balance) })]
     case 'delete-asset':
       return [
         d.kind === 'delete-asset' ? d.name : '',
-        'Not confirmed: what the phone does with the transactions recorded in it. Check them after deleting.',
+        t('Not confirmed: what the phone does with the transactions recorded in it. Check them after deleting.'),
       ]
     case 'create-card':
     case 'update-card':
       return [
         op.fields.name,
-        `Paid from ${op.fields.linkAssetName}`,
-        `Statement closes on day ${op.fields.closingDay}, payment due on day ${op.fields.paymentDay}`,
+        t('Paid from {name}', { name: op.fields.linkAssetName }),
+        t('Statement closes on day {closing}, payment due on day {payment}', { closing: op.fields.closingDay.toLocaleString(intlLocale()), payment: op.fields.paymentDay.toLocaleString(intlLocale()) }),
       ]
   }
   return []
@@ -291,127 +292,127 @@ function close() {
 
 <template>
   <dialog ref="dialog" aria-labelledby="change-title" @cancel.prevent="close">
-    <h2 id="change-title">{{ title }}</h2>
+    <h2 id="change-title">{{ t(title) }}</h2>
 
     <form v-if="step === 'edit'" class="grid" @submit.prevent="review">
       <template v-if="draft.kind === 'transaction'">
-        <div class="seg" role="radiogroup" aria-label="Type">
-          <label><input v-model="form.kind" type="radio" value="expense" @change="form.categoryId = ''" /> Expense</label>
-          <label><input v-model="form.kind" type="radio" value="income" @change="form.categoryId = ''" /> Income</label>
+        <div class="seg" role="radiogroup" :aria-label="t('Type')">
+          <label><input v-model="form.kind" type="radio" value="expense" @change="form.categoryId = ''" /> {{ t('Expense') }}</label>
+          <label><input v-model="form.kind" type="radio" value="income" @change="form.categoryId = ''" /> {{ t('Income') }}</label>
         </div>
-        <label>Date <input id="f-date" v-model="form.date" type="date" required /></label>
-        <label>Amount <input id="f-amount" v-model.number="form.amount" type="number" min="0.01" step="0.01" required /></label>
-        <label>Account
+        <label>{{ t('Date') }} <input id="f-date" v-model="form.date" type="date" required /></label>
+        <label>{{ t('Amount') }} <input id="f-amount" v-model.number="form.amount" type="number" min="0.01" step="0.01" required /></label>
+        <label>{{ t('Account') }}
           <select id="f-account" v-model="form.assetId"><option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.name }}</option></select>
         </label>
-        <label>Category
+        <label>{{ t('Category') }}
           <select id="f-category" v-model="form.categoryId" @change="form.subcategoryId = ''">
-            <option value="" disabled>Choose…</option>
+            <option value="" disabled>{{ t('Choose…') }}</option>
             <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
           </select>
         </label>
-        <label v-if="subcategories.length">Subcategory
+        <label v-if="subcategories.length">{{ t('Subcategory') }}
           <select id="f-sub" v-model="form.subcategoryId">
-            <option value="">None</option>
+            <option value="">{{ t('None') }}</option>
             <option v-for="s in subcategories" :key="s.id" :value="s.id">{{ s.name }}</option>
           </select>
         </label>
-        <label class="wide">Note <input id="f-note" v-model="form.note" maxlength="500" /></label>
+        <label class="wide">{{ t('Note') }} <input id="f-note" v-model="form.note" maxlength="500" /></label>
         <p v-if="suggestion" class="wide suggest" role="status">
-          <span>Suggested from your history: <b>{{ suggestion.label }}</b> <small>(used {{ suggestion.count }} {{ suggestion.count === 1 ? 'time' : 'times' }})</small></span>
-          <button type="button" @click="useSuggestion">Use it</button>
+          <span>{{ t('Suggested from your history:') }} <b>{{ suggestion.label }}</b> <small>{{ t('(used {n} {times})', { n: suggestion.count.toLocaleString(intlLocale()), times: suggestion.count === 1 ? t('time') : t('times') }) }}</small></span>
+          <button type="button" @click="useSuggestion">{{ t('Use it') }}</button>
         </p>
         <p v-else-if="canAskAi || aiSuggest.state !== 'idle' || aiSuggest.text" class="wide suggest" role="status">
-          <span v-if="aiSuggest.state === 'asking'">Asking the assistant…</span>
-          <span v-else-if="aiSuggest.state === 'none'">The assistant found no matching category.</span>
-          <span v-else-if="aiSuggest.state === 'failed'">The assistant could not suggest a category.</span>
-          <span v-else-if="aiSuggest.text">{{ aiSuggest.text }}</span>
-          <span v-else>No earlier movement has this note.</span>
-          <button v-if="canAskAi && aiSuggest.state !== 'asking'" type="button" @click="askAiCategory">Ask the assistant</button>
+          <span v-if="aiSuggest.state === 'asking'">{{ t('Asking the assistant…') }}</span>
+          <span v-else-if="aiSuggest.state === 'none'">{{ t('The assistant found no matching category.') }}</span>
+          <span v-else-if="aiSuggest.state === 'failed'">{{ t('The assistant could not suggest a category.') }}</span>
+          <span v-else-if="aiSuggest.text">{{ t('Filled in by the assistant: {category}. Check it before saving.', { category: aiSuggest.text }) }}</span>
+          <span v-else>{{ t('No earlier movement has this note.') }}</span>
+          <button v-if="canAskAi && aiSuggest.state !== 'asking'" type="button" @click="askAiCategory">{{ t('Ask the assistant') }}</button>
         </p>
-        <label class="wide">Detail <input id="f-detail" v-model="form.detail" maxlength="500" /></label>
+        <label class="wide">{{ t('Detail') }} <input id="f-detail" v-model="form.detail" maxlength="500" /></label>
       </template>
 
       <template v-else-if="draft.kind === 'transfer'">
-        <label>Date <input id="t-date" v-model="form.date" type="date" required /></label>
-        <label>Amount <input id="t-amount" v-model.number="form.amount" type="number" min="0.01" step="0.01" required /></label>
-        <label>From
+        <label>{{ t('Date') }} <input id="t-date" v-model="form.date" type="date" required /></label>
+        <label>{{ t('Amount') }} <input id="t-amount" v-model.number="form.amount" type="number" min="0.01" step="0.01" required /></label>
+        <label>{{ t('From') }}
           <select id="t-from" v-model="form.assetId"><option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.name }}</option></select>
         </label>
-        <label>To
+        <label>{{ t('To') }}
           <select id="t-to" v-model="form.toAssetId">
-            <option value="" disabled>Choose…</option>
+            <option value="" disabled>{{ t('Choose…') }}</option>
             <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
           </select>
         </label>
-        <label class="wide">Note <input id="t-note" v-model="form.note" maxlength="500" /></label>
+        <label class="wide">{{ t('Note') }} <input id="t-note" v-model="form.note" maxlength="500" /></label>
       </template>
 
       <template v-else-if="draft.kind === 'asset'">
-        <label class="wide">Name <input id="a-name" v-model="form.name" maxlength="100" required /></label>
-        <label>Group
+        <label class="wide">{{ t('Name') }} <input id="a-name" v-model="form.name" maxlength="100" required /></label>
+        <label>{{ t('Group') }}
           <select id="a-group" v-model="form.groupId"><option v-for="g in groups" :key="g.id" :value="g.id">{{ g.name }}</option></select>
         </label>
-        <label>Balance <input id="a-balance" v-model.number="form.balance" type="number" step="0.01" /></label>
+        <label>{{ t('Balance') }} <input id="a-balance" v-model.number="form.balance" type="number" step="0.01" /></label>
       </template>
 
       <template v-else-if="draft.kind === 'card'">
-        <label class="wide">Card name <input id="c-name" v-model="form.name" maxlength="100" required /></label>
-        <label class="wide">Paid from
+        <label class="wide">{{ t('Card name') }} <input id="c-name" v-model="form.name" maxlength="100" required /></label>
+        <label class="wide">{{ t('Paid from') }}
           <select id="c-link" v-model="form.linkAssetId">
-            <option value="" disabled>Choose…</option>
+            <option value="" disabled>{{ t('Choose…') }}</option>
             <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
           </select>
         </label>
-        <label>Statement closes (day) <input id="c-close" v-model.number="form.closingDay" type="number" min="1" max="31" required /></label>
-        <label>Payment due (day) <input id="c-pay" v-model.number="form.paymentDay" type="number" min="1" max="31" required /></label>
-        <label v-if="!isEdit">Amount to pay now <input id="c-out" v-model.number="form.outstanding" type="number" step="0.01" /></label>
+        <label>{{ t('Statement closes (day)') }} <input id="c-close" v-model.number="form.closingDay" type="number" min="1" max="31" required /></label>
+        <label>{{ t('Payment due (day)') }} <input id="c-pay" v-model.number="form.paymentDay" type="number" min="1" max="31" required /></label>
+        <label v-if="!isEdit">{{ t('Amount to pay now') }} <input id="c-out" v-model.number="form.outstanding" type="number" step="0.01" /></label>
       </template>
 
-      <p v-if="error" class="error wide" role="alert">{{ error }}</p>
+      <p v-if="error" class="error wide" role="alert">{{ t(error) }}</p>
       <div class="actions wide">
-        <button type="button" @click="close">Cancel</button>
-        <button class="primary" type="submit">Review change</button>
+        <button type="button" @click="close">{{ t('Cancel') }}</button>
+        <button class="primary" type="submit">{{ t('Review change') }}</button>
       </div>
     </form>
 
     <div v-else-if="step === 'review' || step === 'sending'">
-      <p class="lead">{{ destructive ? 'This will permanently remove from your phone:' : 'This will be saved on your phone:' }}</p>
+      <p class="lead">{{ destructive ? t('This will permanently remove from your phone:') : t('This will be saved on your phone:') }}</p>
       <ul class="summary"><li v-for="line in summary" :key="line">{{ line }}</li></ul>
       <p v-if="!session.canWrite()" class="error">
-        A backup from the last 30 minutes is needed first. Go to Connect phone and choose Back up now.
+        {{ t('A backup from the last 30 minutes is needed first. Go to Connect phone and choose Back up now.') }}
       </p>
       <p v-else-if="session.backup?.sqlite.status !== 'saved'" class="warn">
-        Your latest backup has only the readable snapshot, not the full phone backup. You may not be able to undo this.
+        {{ t('Your latest backup has only the readable snapshot, not the full phone backup. You may not be able to undo this.') }}
       </p>
-      <label v-if="destructive" class="typed">Type <b>delete</b> to confirm
+      <label v-if="destructive" class="typed">{{ t('Type {word} to confirm', { word: 'delete' }) }}
         <input id="confirm-typed" v-model="typed" autocomplete="off" />
       </label>
-      <p v-if="error" class="error" role="alert">{{ error }}</p>
+      <p v-if="error" class="error" role="alert">{{ t(error) }}</p>
       <div class="actions">
         <button type="button" :disabled="step === 'sending'" @click="draft.kind.startsWith('delete') ? close() : (step = 'edit')">
-          {{ draft.kind.startsWith('delete') ? 'Cancel' : 'Back' }}
+          {{ draft.kind.startsWith('delete') ? t('Cancel') : t('Back') }}
         </button>
         <button
           :class="destructive ? 'danger' : 'primary'"
           :disabled="step === 'sending' || !session.canWrite() || (destructive && typed.trim().toLowerCase() !== 'delete')"
           @click="confirm"
         >
-          {{ step === 'sending' ? 'Saving on phone…' : destructive ? 'Delete' : 'Save on phone' }}
+          {{ step === 'sending' ? t('Saving on phone…') : destructive ? t('Delete') : t('Save on phone') }}
         </button>
       </div>
     </div>
 
     <div v-else-if="step === 'queued'">
-      <p class="ok">Saved on this computer, not sent yet.</p>
-      <p>The phone was not reachable, so the change is waiting in <b>Pending changes</b>.
-        Open Money Manager on the phone again and use <b>Sync pending changes</b> to send it.</p>
-      <div class="actions"><button class="primary" @click="close">Close</button></div>
+      <p class="ok">{{ t('Saved on this computer, not sent yet.') }}</p>
+      <p>{{ t('The phone was not reachable, so the change is waiting in') }} <b>{{ t('Pending changes') }}</b>.
+        {{ t('Open Money Manager on the phone again and use') }} <b>{{ t('Sync pending changes') }}</b> {{ t('to send it.') }}</p>
+      <div class="actions"><button class="primary" @click="close">{{ t('Close') }}</button></div>
     </div>
 
     <div v-else>
-      <p class="ok">Done. The data was reloaded from your phone.</p>
-      <div class="actions"><button class="primary" @click="close">Close</button></div>
+      <p class="ok">{{ t('Done. The data was reloaded from your phone.') }}</p>
+      <div class="actions"><button class="primary" @click="close">{{ t('Close') }}</button></div>
     </div>
   </dialog>
 </template>

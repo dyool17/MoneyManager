@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
+import { t } from '../../i18n'
+import { formatDate } from '../../domain/format'
 import { useSession } from '../../stores/session'
 import { useBudgetPlans } from '../../stores/budgets'
 import { useLifeEvents } from '../../stores/life-events'
@@ -46,52 +48,51 @@ const remove = (id: string) => {
   try { events.remove(id) } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
 }
 const KIND_LABEL: Record<EventKind, string> = { 'one-off': 'One-off spike', 'new-normal': 'New normal', temporary: 'Temporary' }
-const rangeOf = (e: LifeEvent) => (e.end ? `${e.start} to ${e.end}` : `${e.start} onwards`)
+const rangeOf = (e: LifeEvent) => (e.end ? t('{start} to {end}', { start: formatDate(e.start), end: formatDate(e.end) }) : t('{start} onwards', { start: formatDate(e.start) }))
 </script>
 
 <template>
   <div class="card cats events">
     <div class="card-head">
-      <h2>Life events</h2>
-      <button type="button" @click="adding = !adding">{{ adding ? 'Cancel' : 'Add event' }}</button>
+      <h2>{{ t('Life events') }}</h2>
+      <button type="button" @click="adding = !adding">{{ adding ? t('Cancel') : t('Add event') }}</button>
     </div>
 
     <p class="muted small">
-      Notes like a move, an illness or a new baby that explain unusual spending. The assistant reads them (without
-      labels unless you share transaction descriptions) to project and explain better. Saved on this computer only.
+      {{ t('Notes like a move, an illness or a new baby that explain unusual spending. The assistant reads them (without labels unless you share transaction descriptions) to project and explain better. Saved on this computer only.') }}
     </p>
 
     <form v-if="adding" class="form" @submit.prevent="submit">
-      <label>Note <input v-model="form.label" maxlength="80" placeholder="Moving" required /></label>
-      <label>Kind
+      <label>{{ t('Note') }} <input v-model="form.label" maxlength="80" :placeholder="t('Moving')" required /></label>
+      <label>{{ t('Kind') }}
         <select v-model="form.kind">
-          <option value="one-off">One-off spike</option>
-          <option value="new-normal">New normal (baseline restarts)</option>
-          <option value="temporary">Temporary</option>
+          <option value="one-off">{{ t('One-off spike') }}</option>
+          <option value="new-normal">{{ t('New normal (baseline restarts)') }}</option>
+          <option value="temporary">{{ t('Temporary') }}</option>
         </select>
       </label>
       <div class="dates">
-        <label>Start <input v-model="form.start" type="date" required /></label>
-        <label>End (blank = still open) <input v-model="form.end" type="date" /></label>
+        <label>{{ t('Start') }} <input v-model="form.start" type="date" required /></label>
+        <label>{{ t('End (blank = still open)') }} <input v-model="form.end" type="date" /></label>
       </div>
-      <fieldset><legend>Affected categories</legend>
+      <fieldset><legend>{{ t('Affected categories') }}</legend>
         <label v-for="c in choices" :key="c.id" class="cat"><input type="checkbox" :checked="form.categories.includes(c.id)" @change="toggle(c.id)" /> {{ c.name }}</label>
       </fieldset>
-      <p v-if="error" class="error" role="alert">{{ error }}</p>
-      <button class="primary" type="submit">Save event</button>
+      <p v-if="error" class="error" role="alert">{{ t(error) }}</p>
+      <button class="primary" type="submit">{{ t('Save event') }}</button>
     </form>
 
     <ul v-if="events.state.events.length" class="rows">
       <li v-for="e in events.state.events" :key="e.id">
         <span class="ev">
           <span class="name">{{ e.label }}</span>
-          <span class="muted small">{{ rangeOf(e) }} · {{ KIND_LABEL[e.kind] }} · {{ e.categoryIds.map(nameOf).join(', ') }}</span>
-          <button type="button" class="hint" @click="remove(e.id)">Remove</button>
+          <span class="muted small">{{ rangeOf(e) }} · {{ t(KIND_LABEL[e.kind]) }} · {{ e.categoryIds.map(nameOf).join(', ') }}</span>
+          <button type="button" class="hint" @click="remove(e.id)">{{ t('Remove') }}</button>
         </span>
       </li>
     </ul>
-    <p v-else class="muted small">No events recorded.</p>
-    <p v-if="events.storageError" class="error" role="alert">{{ events.storageError }}</p>
+    <p v-else class="muted small">{{ t('No events recorded.') }}</p>
+    <p v-if="events.storageError" class="error" role="alert">{{ t(events.storageError) }}</p>
   </div>
 </template>
 

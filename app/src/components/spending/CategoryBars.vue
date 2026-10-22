@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { t, intlLocale } from '../../i18n'
 import { formatMoney } from '../../domain/format'
 import { categoryRows } from '../../domain/spending'
 import type { CategoryTotal } from '../../domain/types'
@@ -20,7 +21,7 @@ const PACE_LABEL: Record<BudgetState, string> = { ok: 'on track', ahead: 'spendi
 </script>
 
 <template>
-  <p v-if="!rows.length" class="muted empty">Nothing recorded for this filter.</p>
+  <p v-if="!rows.length" class="muted empty">{{ t('Nothing recorded for this filter.') }}</p>
   <ul v-else class="rows">
     <li v-for="r in rows" :key="r.name">
       <button type="button" class="row" :aria-pressed="selected === r.name" @click="emit('toggle', r.name)">
@@ -31,18 +32,18 @@ const PACE_LABEL: Record<BudgetState, string> = { ok: 'on track', ahead: 'spendi
         </span>
         <span class="num amount">{{ formatMoney(r.total) }}</span>
         <span v-if="r.percent !== null" :class="['note', r.state]">
-          <template v-if="r.state === 'over'">over by {{ formatMoney(r.overBy) }}</template>
-          <template v-else>{{ r.percent }}% of budget</template>
-          <template v-if="pace?.[r.name]"> · {{ PACE_LABEL[pace[r.name]] }}</template>
+          <template v-if="r.state === 'over'">{{ t('over by {amount}', { amount: formatMoney(r.overBy) }) }}</template>
+          <template v-else>{{ t('{n}% of budget', { n: r.percent.toLocaleString(intlLocale()) }) }}</template>
+          <template v-if="pace?.[r.name]"> · {{ t(PACE_LABEL[pace[r.name]]) }}</template>
         </span>
       </button>
     </li>
   </ul>
   <p v-if="kind === 'expense' && rows.length" class="legend muted">
-    <span class="key"><i class="sw within" /> within budget</span>
-    <span class="key"><i class="sw over" /> over budget</span>
-    <span class="key"><i class="sw none" /> no budget</span>
-    <span class="key"><i class="mark" /> budget</span>
+    <span class="key"><i class="sw within" /> {{ t('within budget') }}</span>
+    <span class="key"><i class="sw over" /> {{ t('over budget') }}</span>
+    <span class="key"><i class="sw none" /> {{ t('no budget') }}</span>
+    <span class="key"><i class="mark" /> {{ t('budget') }}</span>
   </p>
 </template>
 

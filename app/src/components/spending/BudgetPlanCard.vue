@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { t, intlLocale } from '../../i18n'
 import { useSession } from '../../stores/session'
 import { useBudgetPlans } from '../../stores/budgets'
 import { evaluateBudgets, suggestsAnnual, type BudgetStatus } from '../../domain/budget-plan'
@@ -45,45 +46,43 @@ const STATE_LABEL = { ok: 'on track', ahead: 'spending fast', over: 'over budget
 <template>
   <div class="card cats plan">
     <div class="card-head">
-      <h2>Imported budgets</h2>
+      <h2>{{ t('Imported budgets') }}</h2>
       <label class="import">
-        <span class="small muted">{{ budgets.importing ? 'Reading backup locally…' : 'Import .mmbak / .sqlite' }}</span>
+        <span class="small muted">{{ budgets.importing ? t('Reading backup locally…') : t('Import .mmbak / .sqlite') }}</span>
         <input type="file" accept=".mmbak,.sqlite,.sqlite3" :disabled="budgets.importing" @change="onFile" />
       </label>
     </div>
 
     <p class="muted small">
-      Subcategory and annual budgets come from a native backup you export from the phone. Read in memory and saved on
-      this computer only; nothing is sent anywhere or written to the phone.
-      <template v-if="budgets.state.plan"> Last import: {{ new Date(budgets.state.plan.importedAt).toLocaleString() }}.</template>
+      {{ t('Subcategory and annual budgets come from a native backup you export from the phone. Read in memory and saved on this computer only; nothing is sent anywhere or written to the phone.') }}
+      <template v-if="budgets.state.plan"> {{ t('Last import: {date}.', { date: new Date(budgets.state.plan.importedAt).toLocaleString(intlLocale()) }) }}</template>
     </p>
 
-    <p v-if="budgets.storageError || importError" class="error" role="alert">{{ budgets.storageError || importError }}</p>
+    <p v-if="budgets.storageError || importError" class="error" role="alert">{{ t(budgets.storageError || importError) }}</p>
 
     <p v-if="!budgets.state.plan" class="muted small">
-      No imported budgets yet, so categories are judged month by month from the phone's top-level budgets.
+      {{ t("No imported budgets yet, so categories are judged month by month from the phone's top-level budgets.") }}
     </p>
     <template v-else>
       <p v-if="suggestions.length" class="muted small" role="status">
-        {{ suggestions.length }} categor{{ suggestions.length === 1 ? 'y' : 'ies' }} concentrate spending in a few
-        months of the year; judging on the year keeps those seasonal spikes inside the annual allowance.
+        {{ t('{n} categories concentrate spending in a few months of the year; judging on the year keeps those seasonal spikes inside the annual allowance.', { n: suggestions.length.toLocaleString(intlLocale()) }) }}
       </p>
       <ul class="rows">
         <li v-for="s in statuses" :key="s.categoryId">
           <span class="row name-cell">
             <span class="name">{{ s.name }}<span v-if="s.parent" class="muted small"> · {{ s.parent }}</span></span>
-            <span :class="['note', s.state]">{{ STATE_LABEL[s.state] }} · {{ formatMoney(s.judgedSpent) }} of {{ formatMoney(s.judgedBudget) }}</span>
-            <span class="seg mode" role="group" :aria-label="`Budget mode for ${s.name}`">
-              <button :aria-pressed="s.mode === 'monthly'" @click="budgets.setMode(s.categoryId, 'monthly')">Monthly</button>
-              <button :aria-pressed="s.mode === 'annual'" @click="budgets.setMode(s.categoryId, 'annual')">Annual</button>
+            <span :class="['note', s.state]">{{ t(STATE_LABEL[s.state]) }} · {{ t('{spent} of {budget}', { spent: formatMoney(s.judgedSpent), budget: formatMoney(s.judgedBudget) }) }}</span>
+            <span class="seg mode" role="group" :aria-label="t('Budget mode for {name}', { name: s.name })">
+              <button :aria-pressed="s.mode === 'monthly'" @click="budgets.setMode(s.categoryId, 'monthly')">{{ t('Monthly') }}</button>
+              <button :aria-pressed="s.mode === 'annual'" @click="budgets.setMode(s.categoryId, 'annual')">{{ t('Annual') }}</button>
             </span>
             <button v-if="suggested(s.categoryId)" type="button" class="hint" @click="budgets.setMode(s.categoryId, 'annual')">
-              Spends in bursts — use annual?
+              {{ t('Spends in bursts — use annual?') }}
             </button>
           </span>
         </li>
       </ul>
-      <p v-if="!statuses.length" class="muted small">No spending recorded for this month yet.</p>
+      <p v-if="!statuses.length" class="muted small">{{ t('No spending recorded for this month yet.') }}</p>
     </template>
   </div>
 </template>

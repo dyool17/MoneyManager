@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { t, intlLocale } from '../i18n'
 import { formatDate, formatMoney } from '../domain/format'
 import { weekday, type DayTotal } from '../domain/insights'
 
@@ -29,7 +30,8 @@ const grid = computed(() => {
   }
   return weeks
 })
-const LABELS = ['Mon', '', 'Wed', '', 'Fri', '', 'Sun']
+const LABELS = computed(() => Array.from({ length: 7 }, (_, i) => i % 2 === 0
+  ? new Date(Date.UTC(2024, 0, 1 + i)).toLocaleDateString(intlLocale(), { weekday: 'short', timeZone: 'UTC' }) : ''))
 </script>
 
 <template>
@@ -44,9 +46,9 @@ const LABELS = ['Mon', '', 'Wed', '', 'Fri', '', 'Sun']
       </div>
     </div>
     <figcaption>
-      <span v-if="hover"><b>{{ formatDate(hover.date) }}</b> · {{ formatMoney(hover.total) }} in {{ hover.count }} {{ hover.count === 1 ? 'expense' : 'expenses' }}</span>
-      <span v-else>Hover a day to see what you spent.</span>
-      <span class="scale">Less <i v-for="l in 6" :key="l" :class="['cell', `l${l - 1}`]" /> More</span>
+      <span v-if="hover"><b>{{ formatDate(hover.date) }}</b> · {{ t('{amount} in {n} {kind}', { amount: formatMoney(hover.total), n: hover.count.toLocaleString(intlLocale()), kind: hover.count === 1 ? t('expense') : t('expenses') }) }}</span>
+      <span v-else>{{ t('Hover a day to see what you spent.') }}</span>
+      <span class="scale">{{ t('Less') }} <i v-for="l in 6" :key="l" :class="['cell', `l${l - 1}`]" /> {{ t('More') }}</span>
     </figcaption>
   </figure>
 </template>

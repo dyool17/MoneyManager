@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { t } from '../../i18n'
+import AiButton from '../AiButton.vue'
 import { useSession } from '../../stores/session'
 import { useBudgetPlans } from '../../stores/budgets'
 import { useLifeEvents } from '../../stores/life-events'
 import { useDecisions } from '../../stores/decisions'
 import { findBadDecisions } from '../../domain/bad-decisions'
-import { formatMoney } from '../../domain/format'
+import { formatDate, formatMoney } from '../../domain/format'
 
 const session = useSession()
 const plans = useBudgetPlans()
@@ -35,7 +37,7 @@ function intoEvent(d: (typeof decisions.value)[number]) {
   const m = d.movement
   const id = m.subcategoryId ?? m.categoryId
   try {
-    events.add({ label: m.content?.slice(0, 80) || `${m.subcategoryName || m.categoryName || 'Expense'} spike`, start: m.date, categoryIds: id ? [id] : [], kind: 'one-off' })
+    events.add({ label: m.content?.slice(0, 80) || t('{category} spike', { category: m.subcategoryName || m.categoryName || t('Expense') }), start: m.date, categoryIds: id ? [id] : [], kind: 'one-off' })
     dismissed.dismiss(m.id)
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
@@ -46,28 +48,27 @@ function intoEvent(d: (typeof decisions.value)[number]) {
 <template>
   <div class="card cats decisions">
     <div class="card-head">
-      <h2>Possible bad decisions</h2>
+      <h2>{{ t('Possible bad decisions') }}</h2>
     </div>
     <p class="muted small">
-      Expenses that look big for their budget, have no life event or yearly allowance explaining them, and belong to a
-      discretionary group. Dismissed flags stay hidden on this computer.
+      {{ t('Expenses that look big for their budget, have no life event or yearly allowance explaining them, and belong to a discretionary group. Dismissed flags stay hidden on this computer.') }}
     </p>
-    <p v-if="error" class="error" role="alert">{{ error }}</p>
+    <p v-if="error" class="error" role="alert">{{ t(error) }}</p>
     <ul v-if="decisions.length" class="rows">
       <li v-for="d in decisions" :key="d.movement.id">
         <span class="row">
           <span class="name">{{ d.movement.content || d.movement.subcategoryName || d.movement.categoryName }}</span>
-          <span class="muted small">{{ d.movement.date }} · {{ d.budget ? nameOf(d.budget.categoryId) : (d.movement.subcategoryName || d.movement.categoryName) }}</span>
+          <span class="muted small">{{ formatDate(d.movement.date) }} · {{ d.budget ? nameOf(d.budget.categoryId) : (d.movement.subcategoryName || d.movement.categoryName) }}</span>
           <span class="num amount">{{ formatMoney(d.movement.amount) }}</span>
-          <span class="muted small">{{ d.big.map((r) => REASON[r]).join(' · ') }}</span>
-          <AiButton :question="`Was this expense a bad decision? ${d.movement.date} ${(d.movement.subcategoryName || d.movement.categoryName)} ${formatMoney(d.movement.amount)} (${d.big.join(', ')}). Explain and suggest what to do.`" about="Possible bad decision" compact>Why?</AiButton>
-          <button v-if="d.movement.subcategoryId || d.movement.categoryId" type="button" @click="intoEvent(d)">Life event</button>
-          <button type="button" class="hint" @click="dismissed.dismiss(d.movement.id)">Dismiss</button>
+          <span class="muted small">{{ d.big.map((r) => t(REASON[r])).join(' · ') }}</span>
+          <AiButton :question="t('Was this expense a bad decision? {date} {category} {amount} ({reasons}). Explain and suggest what to do.', { date: formatDate(d.movement.date), category: d.movement.subcategoryName || d.movement.categoryName || '', amount: formatMoney(d.movement.amount), reasons: d.big.map((r) => t(REASON[r])).join(', ') })" :about="t('Possible bad decision')" compact>{{ t('Why?') }}</AiButton>
+          <button v-if="d.movement.subcategoryId || d.movement.categoryId" type="button" @click="intoEvent(d)">{{ t('Life event') }}</button>
+          <button type="button" class="hint" @click="dismissed.dismiss(d.movement.id)">{{ t('Dismiss') }}</button>
         </span>
       </li>
     </ul>
-    <p v-else class="muted small">Nothing flagged this month.</p>
-    <p v-if="dismissed.storageError" class="error" role="alert">{{ dismissed.storageError }}</p>
+    <p v-else class="muted small">{{ t('Nothing flagged this month.') }}</p>
+    <p v-if="dismissed.storageError" class="error" role="alert">{{ t(dismissed.storageError) }}</p>
   </div>
 </template>
 
