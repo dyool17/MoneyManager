@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { t } from './i18n'
 import { useSession } from './stores/session'
 import { useChat } from './stores/chat'
 import { SCREENS, useNav, type Screen } from './stores/nav'
@@ -31,13 +32,13 @@ onMounted(() => {
 
 <template>
   <div :class="['shell', { asking: nav.askOpen }]">
-    <nav class="rail" aria-label="Main">
+    <nav class="rail" :aria-label="t('Main')">
       <div class="brand">
         <span class="logo"><Icon name="logo" :size="16" /></span>
         <div class="book">
           <select
             v-if="(session.init?.books.length ?? 0) > 1"
-            aria-label="Book"
+            :aria-label="t('Book')"
             :value="session.bookId"
             :disabled="session.status === 'loading'"
             @change="session.setBook(($event.target as HTMLSelectElement).value)"
@@ -49,21 +50,21 @@ onMounted(() => {
       </div>
 
       <button v-for="s in MAIN" :key="s.id" type="button" class="nav" :aria-current="nav.screen === s.id ? 'page' : undefined" @click="nav.go(s.id)">
-        <Icon :name="ICON[s.id]" />{{ s.label }}
+        <Icon :name="ICON[s.id]" />{{ t(s.label) }}
       </button>
       <button v-if="chat.ready" type="button" class="nav" :aria-pressed="nav.askOpen" @click="nav.askOpen = !nav.askOpen">
-        <Icon name="sparkle" />Ask
+        <Icon name="sparkle" />{{ t('Ask') }}
       </button>
 
       <div class="spacer" />
-      <button type="button" class="nav" :aria-current="nav.screen === 'settings' ? 'page' : undefined" @click="nav.go('settings')"><Icon name="settings" />Settings</button>
-      <button type="button" class="nav" :aria-current="nav.screen === 'help' ? 'page' : undefined" @click="nav.go('help')"><Icon name="help" />Help</button>
+      <button type="button" class="nav" :aria-current="nav.screen === 'settings' ? 'page' : undefined" @click="nav.go('settings')"><Icon name="settings" />{{ t('Settings') }}</button>
+      <button type="button" class="nav" :aria-current="nav.screen === 'help' ? 'page' : undefined" @click="nav.go('help')"><Icon name="help" />{{ t('Help') }}</button>
 
       <button type="button" class="status" @click="nav.go('settings', 'phone')">
         <span :class="['dot', session.source === 'phone' ? 'live' : 'demo']" />
         <span>
-          {{ session.source === 'phone' ? 'Phone connected' : 'Demo data' }}
-          <small>{{ session.source === 'phone' ? (session.backupState === 'done' ? 'Backup saved' : session.address) : 'Connect your phone' }}</small>
+          {{ session.source === 'phone' ? t('Phone connected') : t('Demo data') }}
+          <small>{{ session.source === 'phone' ? (session.backupState === 'done' ? t('Backup saved') : session.address) : t('Connect your phone') }}</small>
         </span>
       </button>
     </nav>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '../i18n'
 import { useSession } from '../stores/session'
 import { useOutbox } from '../stores/outbox'
 const session = useSession()
@@ -6,17 +7,17 @@ const outbox = useOutbox()
 </script>
 
 <template>
-  <div v-if="session.status === 'loading'" class="banner quiet" role="status">Loading from {{ session.source === 'demo' ? 'demo data' : 'your phone' }}…</div>
+  <div v-if="session.status === 'loading'" class="banner quiet" role="status">{{ session.source === 'demo' ? t('Loading from demo data…') : t('Loading from your phone…') }}</div>
   <div v-else-if="session.error" class="banner" role="alert">
-    <strong>{{ session.status === 'invalid-response' ? 'The phone sent data this app cannot read.' : 'Could not load data.' }}</strong>
-    <span>{{ session.error }}</span>
-    <span v-if="session.source === 'phone'">PC Manager stops when the phone is locked or you switch apps. Open Money Manager on the phone and keep it on screen.</span>
-    <span>The figures below are from the last successful load.</span>
-    <button @click="session.refresh()">Try again</button>
+    <strong>{{ session.status === 'invalid-response' ? t('The phone sent data this app cannot read.') : t('Could not load data.') }}</strong>
+    <span>{{ t(session.error) }}</span>
+    <span v-if="session.source === 'phone'">{{ t('PC Manager stops when the phone is locked or you switch apps. Open Money Manager on the phone and keep it on screen.') }}</span>
+    <span>{{ t('The figures below are from the last successful load.') }}</span>
+    <button @click="session.refresh()">{{ t('Try again') }}</button>
   </div>
   <div v-else-if="outbox.pending.length" class="banner pending" role="status">
-    <strong>{{ outbox.pending.length }} change(s) waiting for the phone.</strong>
-    <span>They were not sent. Open Money Manager on the phone and use <b>Sync pending changes</b>.</span>
+    <strong>{{ t('{n} change(s) waiting for the phone.', { n: outbox.pending.length }) }}</strong>
+    <span>{{ t('They were not sent. Open Money Manager on the phone and use') }} <b>{{ t('Sync pending changes') }}</b>.</span>
   </div>
 </template>
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
+import { t } from '../i18n'
 import { useChat } from '../stores/chat'
 import { useNav } from '../stores/nav'
 
@@ -15,7 +16,7 @@ const nav = useNav()
 <template>
   <button v-if="chat.ready" type="button" :class="['ai-btn', { compact }]" @click="nav.ask(props.question, props.about)">
     <Icon name="sparkle" :size="14" />
-    <slot>Explain</slot>
+    <slot>{{ t('Explain') }}</slot>
   </button>
 </template>
 

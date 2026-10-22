@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import Icon from './Icon.vue'
+import { t } from '../i18n'
 import { SCREENS, useNav, type Screen } from '../stores/nav'
 import { useChat } from '../stores/chat'
 
@@ -16,8 +17,9 @@ type Option = { kind: 'go'; screen: Screen; label: string; hint: string } | { ki
 const options = computed<Option[]>(() => {
   const q = text.value.trim().toLowerCase()
   const screens: Option[] = SCREENS
+    .map((s) => ({ ...s, label: t(s.label), hint: t(s.hint) }))
     .filter((s) => !q || s.label.toLowerCase().includes(q) || s.hint.toLowerCase().includes(q))
-    .map((s) => ({ kind: 'go', screen: s.id, label: `Go to ${s.label}`, hint: s.hint }))
+    .map((s) => ({ kind: 'go', screen: s.id, label: t('Go to {screen}', { screen: s.label }), hint: s.hint }))
   return q && chat.ready ? [{ kind: 'ask', label: text.value.trim() }, ...screens] : screens
 })
 
@@ -47,11 +49,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
   <div class="bar">
     <label>
       <Icon :name="chat.ready ? 'sparkle' : 'search'" />
-      <span class="sr">Search or ask</span>
+      <span class="sr">{{ t('Search or ask') }}</span>
       <input
         ref="input" v-model="text" type="text" role="combobox" autocomplete="off"
         :aria-expanded="open" aria-controls="askbar-options"
-        :placeholder="chat.ready ? 'Ask about your money, or jump to a screen…' : 'Jump to a screen…'"
+        :placeholder="chat.ready ? t('Ask about your money, or jump to a screen…') : t('Jump to a screen…')"
         @focus="open = true" @blur="open = false" @input="open = true" @keydown="onKey"
       />
       <kbd>Ctrl K</kbd>
@@ -60,7 +62,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', shortcut))
       <li v-for="(o, i) in options" :key="o.label" role="option" :aria-selected="i === active">
         <button type="button" tabindex="-1" @mousedown.prevent="choose(o)" @mouseenter="active = i">
           <Icon :name="o.kind === 'ask' ? 'sparkle' : 'arrow'" :size="15" />
-          <span v-if="o.kind === 'ask'">Ask: <b>{{ o.label }}</b></span>
+          <span v-if="o.kind === 'ask'">{{ t('Ask:') }} <b>{{ o.label }}</b></span>
           <span v-else>{{ o.label }} <small>{{ o.hint }}</small></span>
         </button>
       </li>

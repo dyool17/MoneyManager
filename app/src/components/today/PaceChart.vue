@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { t } from '../../i18n'
 import { formatMoney } from '../../domain/format'
 
 /** This month's cumulative spending against a typical month, with the month-end projection. */
@@ -60,19 +61,19 @@ const tip = computed(() => {
         <circle :cx="g.x(g.today)" :cy="g.y(g.last)" r="5" class="dot" />
       </template>
       <line v-if="tip" :x1="tip.x" :x2="tip.x" :y1="PAD.top" :y2="H - PAD.bottom" class="cross" />
-      <text :x="PAD.left" :y="H - 6" class="axis">Day 1</text>
-      <text v-if="g.today" :x="g.x(g.today)" :y="H - 6" text-anchor="middle" class="axis">Today</text>
-      <text :x="width - PAD.right" :y="H - 6" text-anchor="end" class="axis">Day {{ daysInMonth }}</text>
+      <text :x="PAD.left" :y="H - 6" class="axis">{{ t('Day {n}', { n: 1 }) }}</text>
+      <text v-if="g.today" :x="g.x(g.today)" :y="H - 6" text-anchor="middle" class="axis">{{ t('Today') }}</text>
+      <text :x="width - PAD.right" :y="H - 6" text-anchor="end" class="axis">{{ t('Day {n}', { n: daysInMonth }) }}</text>
     </svg>
     <div v-if="tip" class="tip" :style="{ left: `${Math.min(tip.x, width - 170)}px` }">
-      <b>Day {{ tip.day }}</b>
-      <span v-if="tip.actual !== undefined"><i class="k actual" />This month {{ formatMoney(tip.actual) }}</span>
-      <span v-if="tip.typical !== undefined"><i class="k typical" />Typical {{ formatMoney(tip.typical) }}</span>
+      <b>{{ t('Day {n}', { n: tip.day }) }}</b>
+      <span v-if="tip.actual !== undefined"><i class="k actual" />{{ t('This month') }} {{ formatMoney(tip.actual) }}</span>
+      <span v-if="tip.typical !== undefined"><i class="k typical" />{{ t('Typical') }} {{ formatMoney(tip.typical) }}</span>
     </div>
     <div class="legend">
-      <span><i class="k actual" />This month</span>
-      <span v-if="typical.length"><i class="k typical" />Typical month</span>
-      <span v-if="projected !== null"><i class="k projection" />Projection {{ formatMoney(projected) }}</span>
+      <span><i class="k actual" />{{ t('This month') }}</span>
+      <span v-if="typical.length"><i class="k typical" />{{ t('Typical month') }}</span>
+      <span v-if="projected !== null"><i class="k projection" />{{ t('Projection') }} {{ formatMoney(projected) }}</span>
     </div>
   </div>
 </template>

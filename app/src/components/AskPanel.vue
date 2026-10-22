@@ -4,6 +4,7 @@ import Icon from './Icon.vue'
 import { useChat } from '../stores/chat'
 import { useNav } from '../stores/nav'
 import { renderMarkdown } from '../domain/markdown'
+import { t } from '../i18n'
 
 const chat = useChat()
 const nav = useNav()
@@ -17,6 +18,14 @@ const SUGGESTIONS = [
   'Am I on track to end this month with money left over?',
   'Build me a realistic monthly budget from my history.',
 ]
+
+/** Translate display-only lookup connectors; tool and field identifiers stay intact. */
+function lookupLabel(source: string) {
+  return t(source)
+    .replace(/\bfrom (\d{4}-\d{2}-\d{2})/g, (_, date: string) => t('from {date}', { date }))
+    .replace(/\bto (\d{4}-\d{2}-\d{2})/g, (_, date: string) => t('to {date}', { date }))
+    .replace(/\bby /g, () => t(' by ').trimStart())
+}
 
 async function send(text = draft.value) {
   if (!text.trim() || chat.sending) return
@@ -45,52 +54,52 @@ onMounted(() => { chat.refreshStatus(); input.value?.focus() })
 </script>
 
 <template>
-  <aside class="ask" aria-label="Ask about your money">
+  <aside class="ask" :aria-label="t('Ask about your money')">
     <header>
-      <strong><Icon name="sparkle" :size="16" /> Ask</strong>
+      <strong><Icon name="sparkle" :size="16" /> {{ t('Ask') }}</strong>
       <div class="actions">
-        <button type="button" class="ghost" :disabled="!chat.messages.length || chat.sending" @click="chat.reset()">New chat</button>
-        <button type="button" class="ghost" aria-label="Close the Ask panel" @click="nav.askOpen = false"><Icon name="close" :size="16" /></button>
+        <button type="button" class="ghost" :disabled="!chat.messages.length || chat.sending" @click="chat.reset()">{{ t('New chat') }}</button>
+        <button type="button" class="ghost" :aria-label="t('Close the Ask panel')" @click="nav.askOpen = false"><Icon name="close" :size="16" /></button>
       </div>
     </header>
 
     <p v-if="nav.focus" class="focus">
-      <span>Looking at: <b>{{ nav.focus }}</b></span>
-      <button type="button" aria-label="Stop focusing on this" @click="nav.focus = null"><Icon name="close" :size="12" /></button>
+      <span>{{ t('Looking at:') }} <b>{{ t(nav.focus) }}</b></span>
+      <button type="button" :aria-label="t('Stop focusing on this')" @click="nav.focus = null"><Icon name="close" :size="12" /></button>
     </p>
 
     <div v-if="!chat.ready" class="setup">
-      <p>{{ chat.missing || 'Set up an assistant to ask about your money.' }}</p>
-      <button type="button" class="primary" @click="nav.go('settings', 'ai')">Set up in Settings</button>
+      <p>{{ t(chat.missing || 'Set up an assistant to ask about your money.') }}</p>
+      <button type="button" class="primary" @click="nav.go('settings', 'ai')">{{ t('Set up in Settings') }}</button>
     </div>
 
     <div ref="log" class="log" aria-live="polite">
       <div v-if="!chat.messages.length && chat.ready" class="empty">
-        <p class="muted">Ask anything about your money. The assistant reads the same reports you see and can look up specific movements.</p>
-        <button v-for="s in SUGGESTIONS" :key="s" type="button" :disabled="chat.sending" @click="send(s)">{{ s }}</button>
+        <p class="muted">{{ t('Ask anything about your money. The assistant reads the same reports you see and can look up specific movements.') }}</p>
+        <button v-for="s in SUGGESTIONS" :key="s" type="button" :disabled="chat.sending" @click="send(t(s))">{{ t(s) }}</button>
       </div>
       <div v-for="(m, i) in chat.messages" :key="i" :class="['msg', m.role]">
         <div v-if="m.role === 'assistant'" class="answer">
           <details v-if="m.lookups?.length" class="lookups">
-            <summary><Icon name="search" :size="12" /> Looked up {{ m.lookups.length }} {{ m.lookups.length === 1 ? 'query' : 'queries' }}</summary>
-            <ul><li v-for="(l, j) in m.lookups" :key="j">{{ l }}</li></ul>
+            <summary><Icon name="search" :size="12" /> {{ m.lookups.length === 1 ? t('Looked up {n} query', { n: m.lookups.length }) : t('Looked up {n} queries', { n: m.lookups.length }) }}</summary>
+            <ul><li v-for="(l, j) in m.lookups" :key="j">{{ lookupLabel(l) }}</li></ul>
           </details>
           <div class="bubble md" v-html="renderMarkdown(m.content)" />
         </div>
         <div v-else class="bubble">{{ m.content }}</div>
       </div>
       <div v-if="chat.sending" class="msg assistant">
-        <div class="bubble typing"><i /><i /><i /><span v-if="chat.lookingUp" class="lookup-now">Looking up {{ chat.lookingUp }}</span></div>
+        <div class="bubble typing"><i /><i /><i /><span v-if="chat.lookingUp" class="lookup-now">{{ t('Looking up {query}', { query: lookupLabel(chat.lookingUp) }) }}</span></div>
       </div>
     </div>
 
-    <p v-if="chat.error" class="error" role="alert">{{ chat.error }}</p>
+    <p v-if="chat.error" class="error" role="alert">{{ t(chat.error) }}</p>
 
     <form class="composer" @submit.prevent="send()">
-      <textarea ref="input" v-model="draft" rows="2" :placeholder="nav.focus ? `Ask about ${nav.focus}…` : 'Ask about your money…'" :disabled="!chat.available" @keydown="onKey" />
-      <button type="submit" class="primary" :disabled="!chat.ready || chat.sending || !draft.trim()">Send</button>
+      <textarea ref="input" v-model="draft" rows="2" :placeholder="nav.focus ? t('Ask about {focus}…', { focus: t(nav.focus) }) : t('Ask about your money…')" :disabled="!chat.available" @keydown="onKey" />
+      <button type="submit" class="primary" :disabled="!chat.ready || chat.sending || !draft.trim()">{{ t('Send') }}</button>
     </form>
-    <p class="foot muted">Reads totals and categories; shop names only if you allow it in Settings.</p>
+    <p class="foot muted">{{ t('Reads totals and categories; shop names only if you allow it in Settings.') }}</p>
   </aside>
 </template>
 
