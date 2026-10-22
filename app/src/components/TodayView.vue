@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, watch } from 'vue'
 import Icon from './Icon.vue'
 import AiButton from './AiButton.vue'
 import PaceChart from './today/PaceChart.vue'
@@ -83,7 +83,8 @@ const plain = computed(() => {
   return `You have spent ${formatMoney(now.value.expense)} with ${daysLeft.value} days left. At your usual pace ${monthName.value} closes near ${formatMoney(projection.value.projected)}, ${c >= 0 ? `leaving about ${formatMoney(c)}` : `about ${formatMoney(-c)} short`}.`
 })
 
-onMounted(() => { if (history.state === 'idle') history.fromSession(12) })
+// Also reloads after a phone connection resets the history.
+watch(() => history.state, (s) => { if (s === 'idle') history.fromSession(12) }, { immediate: true })
 </script>
 
 <template>

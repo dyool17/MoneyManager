@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, shallowRef } from 'vue'
+import { ref, shallowRef, watch } from 'vue'
 import type { Movement } from '../domain/types'
 import type { MonthBudget } from '../domain/budget-history'
 import { monthRange } from '../domain/insights'
@@ -22,6 +22,22 @@ export const useHistory = defineStore('history', () => {
   const budgets = shallowRef<MonthBudget[]>([])
   const budgetState = ref<'idle' | 'loading' | 'ready' | 'failed' | 'unavailable'>('idle')
   let latest = 0
+
+  // History belongs to the data source it was read from. The app starts on demo data, so without
+  // this reset a later phone connection would keep reporting the demo months. A backup the user
+  // opened stays until they reload.
+  const session = useSession()
+  watch(() => [session.source, session.address, session.bookId], () => {
+    if (source.value === 'backup') return
+    latest++
+    movements.value = []
+    source.value = null
+    span.value = { first: '', last: '' }
+    state.value = 'idle'
+    error.value = null
+    budgets.value = []
+    budgetState.value = 'idle'
+  }, { flush: 'sync' })
 
   async function load(from: HistorySource, task: () => Promise<Movement[]>, first: string, last: string) {
     const token = ++latest

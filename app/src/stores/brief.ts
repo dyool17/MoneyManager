@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useChat } from './chat'
+import { useSession } from './session'
 
 /**
  * The AI brief on Today. Written once per set of reports and kept in memory
@@ -11,6 +12,15 @@ export const useBrief = defineStore('brief', () => {
   const state = ref<'idle' | 'loading' | 'ready' | 'failed'>('idle')
   const error = ref<string | null>(null)
   let writtenFor = ''
+
+  // A brief describes the data it was written from; another source makes it wrong.
+  const session = useSession()
+  watch(() => [session.source, session.address, session.bookId], () => {
+    text.value = null
+    state.value = 'idle'
+    error.value = null
+    writtenFor = ''
+  }, { flush: 'sync' })
 
   async function load(today: string, force = false) {
     const chat = useChat()
