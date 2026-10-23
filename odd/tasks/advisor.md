@@ -1,0 +1,65 @@
+# Financial advisor, not a summarizing chatbot
+
+Objective: give the assistant the history, detected patterns and multi-month projections it needs to advise, and make it reason like a personal financial advisor. Work on `main` (user's standing preference for this personal app: "directo a main … seamos agiles … podemos deshacer"). Tests: Vitest, `vue-tsc --noEmit`. Never write to the phone.
+
+## Specs
+
+- S1. History: "no recibe ni utiliza el contexto historico". The assistant's context covers up to 24 months of history (everything loaded, capped at 24), not the 12-month aggregate it gets today; before answering, the chat loads up to 24 months from the phone when they are missing (reads only). Reports on screens keep their current spans.
+- S2. Patterns: "quiero que detecte patrones de gastos". Deterministic, tested detection over that history, per category (subcategory when present) and for income:
+  - a category × month spending table (every month in range, zero when nothing was spent);
+  - typical month (median of months, life-event one-off spending excluded), trend (change per month over the last 12 months), volatility, and seasonality: calendar months that repeat as spikes (spend ≥ 1.6 × the category's typical month in that calendar month in at least one year, and a spike in the same calendar month of each year with data);
+  - income pattern: typical monthly income, stability, regular sources (same label/category and similar amount in ≥ 3 months) with their usual day of month;
+  - rhythm inside the month: average share of the month's spending done by day 10 and by day 20.
+- S3. Projection: "que proyecte basandose en ellos y en la info". Forecast the next 6 whole months (and the rest of the current month) per category and in total: typical month, adjusted by the category's seasonality for that calendar month, its trend when clear, entries already scheduled on the phone for that month (counted once, never on top of the same recurring charge), active temporary life events and new-normal baselines, and imported budgets as a reference. Each forecast line states its basis. Includes projected income, net per month and the cumulative net over the horizon.
+- S4. Advisor: "quiero un asesor financiero no un chatbot que filtre y summarice cosas." The system prompt makes the assistant a personal financial advisor: diagnose with evidence from the patterns, project, name risks and trade-offs, and give a prioritized plan with quantified monthly/yearly impact; challenge the user's assumptions when the data disagrees; use lookups proactively when a claim needs detail; no artificial brevity for analysis questions (the Today brief stays three sentences). The context also includes imported budgets with their monthly/annual mode and judged state, and the flagged possible bad decisions (descriptions only when "Share transaction descriptions" is on).
+- S5. Privacy unchanged: only totals, categories and dates are sent unless the user shares descriptions; life-event labels stay behind the same toggle.
+
+## Tasks
+
+| ID | Specs | Route | Status | Commit |
+|---|---|---|---|---|
+| T1 | S2 | worker | pending | |
+| T2 | S3 | worker | pending | |
+| T3 | S1, S4, S5 | inline | pending | |
+| T4 | S1-S5 | inline | pending | real-backup context probe, build, install, launch |
+
+## Log
+
+- L1 (2026-10-23): "la IA no es lo que espero, es superficial. boba. no recibe ni utiliza el contexto historico, quiero que detecte patrones de gastos, que proyecte basandose en ellos y en la info, quiero un asesor financiero no un chatbot que filtre y summarice cosas."
+- L2 (2026-10-23): Verified against the user's real backup (several thousand movements over about three years, incl. scheduled): today's context is ~6,060 chars / 109 lines of 12-month aggregates; per category only a yearly total and a 3-vs-3-month change, so no seasonality or trend is detectable; imported budgets, bad-decision flags, income pattern and multi-month projections are absent; SYSTEM_PROMPT asks to "Be concrete and brief … one to three actions". Design decided by the parent (technical, no product fork): pattern engine + forecast as pure domain modules, richer context, advisor prompt.
+
+## Contract for T1-T2 (pure domain, no Vue, no stores)
+
+`app/src/domain/patterns.ts`:
+```ts
+export interface CategoryPattern {
+  key: string            // subcategoryId ?? categoryId ?? name; stable id used by budgets and life events
+  name: string           // subcategory name, else category name
+  group: string          // top-level category name ('' when none)
+  monthly: number[]      // aligned with Patterns.months; 0 for months without spending
+  total: number
+  typical: number        // median month, one-off life-event spending excluded
+  trend: number | null   // change per month over the last 12 months (least squares), null with < 6 months
+  volatility: number | null // coefficient of variation of the months, null when typical is 0
+  seasonal: string[]     // calendar months 'MM' that repeat as spikes (S2 rule)
+  recentVsTypical: number | null // last 3 whole months average / typical
+}
+export interface IncomeSource { label: string; typical: number; months: number; day: number }
+export interface IncomePattern { monthly: number[]; typical: number; volatility: number | null; sources: IncomeSource[] }
+export interface Patterns {
+  months: string[]       // every 'YYYY-MM' from first to the last whole month
+  categories: CategoryPattern[] // expenses only, sorted by total desc
+  income: IncomePattern
+  rhythm: { byDay10: number | null; byDay20: number | null } // average share of a month's spending done by those days
+}
+export function detectPatterns(movements: Movement[], first: string, last: string, events?: LifeEvent[]): Patterns
+```
+`app/src/domain/forecast.ts`:
+```ts
+export type ForecastBasis = 'typical' | 'seasonal' | 'trend' | 'scheduled' | 'event' | 'new-normal'
+export interface ForecastLine { key: string; name: string; amount: number; basis: ForecastBasis[] }
+export interface ForecastMonth { month: string; expense: number; income: number; net: number; lines: ForecastLine[] }
+export interface Forecast { months: ForecastMonth[]; cumulativeNet: number }
+export function forecast(input: { patterns: Patterns; movements: Movement[]; today: string; horizon?: number /* default 6 */; events?: LifeEvent[]; plan?: BudgetPlan | null }): Forecast
+```
+`months[0]` is the current month: actual spending so far plus the forecast for the remaining days (use the month's rhythm share); then `horizon` whole months. Use existing helpers (`countable`, `monthRange`, `recurringCharges`, `futureCommitments`, life-events `coversMovement`) instead of re-implementing them. Transfers and future-dated entries are never history; future-dated entries are the "scheduled" input of their month.
