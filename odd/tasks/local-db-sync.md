@@ -28,3 +28,35 @@ Objective: phase 2 of the plan agreed on 2026-10-23 — keep the whole history i
 
 - L1 (2026-10-23): "que opinas que tengamos una db local con toda la info, con un motor de sincronizacion y desde la app poder ver como si fuera git, cuantas transacciones enviamos y cuantas traemos e ir confirmando. la ia tendria acceso a metricas y estadisticas deterministas generadas por periodos y agrupadas. ..." Phase order agreed: "si hagemole"; phase 1 (milestones) done and tested by the user: "probado. continua".
 - L2 (2026-10-23): Premise check, read-only, no phone access: phone ids equal backup `INOUTCOME.uid` (83 of 101 October rows shared between the 2026-10-20 backup and the 2026-10-21 connection snapshot). Representation differences found: transfer-outs negative on the phone and positive in the backup; backups also hold a type-4 transfer-in leg per transfer (17 in October) that the phone does not list. After normalizing those, the remaining differences are real changes (6 amount edits, 1 deletion, 19 new). Backups carry `UTIME` (modification time, ms); the phone does not. PC Manager limits (docs/PC-MANAGER-LIMITS.md): no change feed, whole-month reads, one request at a time, server stops when the phone locks, writes return no id. Storage decision (parent, technical): SQLite through `rusqlite` (bundled) on the Rust side with thin Tauri commands; comparison logic stays in pure TypeScript domain code.
+
+## Contract for T1 (pure domain, `app/src/domain/sync.ts`)
+
+```ts
+/** A movement in the form both sources are compared in. */
+export interface CanonicalMovement {
+  id: string; date: string; type: MovementType; amount: number /* absolute, cents */
+  assetId: string; toAssetId?: string; categoryId?: string; subcategoryId?: string
+  content?: string; detail?: string
+  /** Display only, never compared: names change when the user renames things. */
+  accountName: string; categoryName?: string; subcategoryName?: string
+}
+export function canonical(m: Movement): CanonicalMovement | null
+//  - amount = |amount| rounded to cents (transfer-outs come negative from the phone, positive from backups)
+//  - backup transfer-in legs (type 'transfer-in', rawCode '4') → null: the phone lists each transfer once
+//  - subcategoryId equal to categoryId, '' or 'null' → undefined (backups repeat the top-level id; the phone leaves it empty)
+//  - content/detail trimmed, '' → undefined
+//  - future-dated (scheduled) movements are kept; they are phone data too
+export type ComparedField = 'date' | 'type' | 'amount' | 'assetId' | 'toAssetId' | 'categoryId' | 'subcategoryId' | 'content' | 'detail'
+export interface FieldChange { field: ComparedField; from: string | number | undefined; to: string | number | undefined }
+export interface IncomingChange {
+  kind: 'new' | 'modified' | 'deleted'; id: string; month: string /* 'YYYY-MM' of the phone date, or the local date for deletions */
+  local?: CanonicalMovement; remote?: CanonicalMovement; changes: FieldChange[] // empty for new/deleted
+}
+export function diffMonth(month: string, local: CanonicalMovement[], remote: CanonicalMovement[]): IncomingChange[]
+//  - compares by id; a movement whose date moved to another month appears as 'modified' in the month that read it (remote side) and must not also be reported 'deleted' in its old month: diffMonth receives only that month's rows, so the engine (T3) passes local rows of the read month plus local rows with the same ids as remote rows
+//  - stable order: new, modified, deleted; then date, id
+export interface Conflict { change: IncomingChange; pending: { id: string; label: string } }
+export function conflicts(changes: IncomingChange[], outbox: { id: string; label: string; op: WriteOp }[]): Conflict[]
+//  - a change conflicts when a pending update/delete targets the same movement id (update-transaction/update-transfer `id`, delete-transactions `ids`)
+export function summarize(changes: IncomingChange[]): { month: string; new: number; modified: number; deleted: number }[]
+```
