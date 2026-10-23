@@ -19,7 +19,7 @@ Objective: phase 1 of the plan agreed on 2026-10-23 — a module to create and e
 | T1 | S1, S3 (domain/store), S5, S7 | worker | done | e5ab440 |
 | T2 | S2, S3 (UI), S4 | worker | done | d7429c1 |
 | T3 | S6 | inline | done | e301032 |
-| T4 | S1-S7 | inline | pending | build, install, launch |
+| T4 | S1-S7 | inline | done | suite 201/201, vue-tsc, vite build; AppImage installed and launched |
 
 ## Log
 
