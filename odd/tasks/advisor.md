@@ -18,9 +18,9 @@ Objective: give the assistant the history, detected patterns and multi-month pro
 
 | ID | Specs | Route | Status | Commit |
 |---|---|---|---|---|
-| T1 | S2 | worker | done | (this commit) |
-| T2 | S3 | worker | done | (this commit) |
-| T3 | S1, S4, S5 | inline | done | (this commit) |
+| T1 | S2 | worker | done | c275b55 |
+| T2 | S3 | worker | done | c275b55 |
+| T3 | S1, S4, S5 | inline | done | ba7756c |
 | T4 | S1-S5 | inline | done | probe on real backup; AppImage built, installed and launched |
 
 ## Log
