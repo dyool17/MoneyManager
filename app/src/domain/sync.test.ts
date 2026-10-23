@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canonical, conflicts, diffMonth, summarize } from './sync'
+import { canonical, conflicts, diffMonth, summarize, fingerprint } from './sync'
 import type { CanonicalMovement, IncomingChange } from './sync'
 import type { Movement } from './types'
 import type { WriteOp } from '../infrastructure/client'
@@ -11,6 +11,17 @@ const movement = (overrides: Partial<Movement> = {}): Movement => ({
 const row = (overrides: Partial<CanonicalMovement> = {}): CanonicalMovement => ({
   id: '1', date: '2026-10-01', type: 'expense', amount: 12,
   assetId: 'cash', accountName: 'Cash', ...overrides,
+})
+
+describe('fingerprint', () => {
+  it('is order independent, compares every compared field, and ignores display names', () => {
+    const rows = [row(), row({ id: '2' })]
+    expect(fingerprint(rows)).toBe(fingerprint([...rows].reverse()))
+    expect(fingerprint(rows)).toBe(fingerprint(rows.map(m => ({ ...m, accountName: 'Renamed', categoryName: 'New', subcategoryName: 'New' }))))
+    for (const change of [{ date: '2026-09-01' }, { type: 'income' as const }, { amount: 13 }, { assetId: 'bank' }, { toAssetId: 'bank' }, { categoryId: 'c' }, { subcategoryId: 's' }, { content: 'note' }, { detail: 'detail' }]) {
+      expect(fingerprint(rows)).not.toBe(fingerprint([row(change), rows[1]!]))
+    }
+  })
 })
 
 describe('canonical', () => {

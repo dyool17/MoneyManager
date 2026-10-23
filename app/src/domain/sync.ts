@@ -52,6 +52,15 @@ export interface IncomingChange {
 }
 
 const comparedFields: ComparedField[] = ['date', 'type', 'amount', 'assetId', 'toAssetId', 'categoryId', 'subcategoryId', 'content', 'detail']
+/** Stable content identity, excluding mutable display labels. */
+export function fingerprint(rows: CanonicalMovement[]): string {
+  const text = JSON.stringify([...rows].sort((a, b) => compareText(a.id, b.id))
+    .map(row => [row.id, ...comparedFields.map(field => row[field])]))
+  let hash = 0x811c9dc5
+  for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193)
+  return (hash >>> 0).toString(16).padStart(8, '0')
+}
+
 const kindOrder = { new: 0, modified: 1, deleted: 2 }
 const compareText = (a: string, b: string): number => a < b ? -1 : a > b ? 1 : 0
 
