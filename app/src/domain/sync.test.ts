@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canonical, conflicts, diffMonth, summarize, fingerprint } from './sync'
+import { canonical, conflicts, diffMonth, fingerprint, fromCanonical, summarize } from './sync'
 import type { CanonicalMovement, IncomingChange } from './sync'
 import type { Movement } from './types'
 import type { WriteOp } from '../infrastructure/client'
@@ -128,5 +128,19 @@ describe('conflicts and summarize', () => {
       { month: '2026-10', new: 1, modified: 0, deleted: 1 },
     ])
     expect(summarize([])).toEqual([])
+  })
+})
+
+describe('fromCanonical', () => {
+  it('turns a stored row back into a movement for reports, with the phone codes and the future flag', () => {
+    const stored = canonical(movement({ id: 'x', date: '2026-11-02', type: 'transfer-out', rawCode: '3', amount: -50, toAssetId: 'bank' }))!
+    expect(fromCanonical(stored, '2026-10-21')).toEqual({
+      id: 'x', date: '2026-11-02', type: 'transfer-out', rawCode: '3', amount: 50, isFuture: true,
+      assetId: 'cash', toAssetId: 'bank', accountName: 'Cash',
+      categoryId: undefined, categoryName: undefined, subcategoryId: undefined, subcategoryName: undefined,
+      content: undefined, detail: undefined,
+    })
+    expect(fromCanonical(canonical(movement({ type: 'income', rawCode: '0' }))!, '2026-10-21')).toMatchObject({ rawCode: '0', isFuture: false })
+    expect(fromCanonical(canonical(movement({ type: 'expense', rawCode: '1' }))!, '2026-10-21').rawCode).toBe('1')
   })
 })

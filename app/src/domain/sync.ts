@@ -122,3 +122,15 @@ export function summarize(changes: IncomingChange[]): { month: string; new: numb
   }
   return [...months.values()].sort((a, b) => compareText(a.month, b.month))
 }
+
+const CODES: Partial<Record<MovementType, string>> = { income: '0', expense: '1', 'transfer-out': '3', 'transfer-in': '4' }
+
+/** A stored row as a movement for reports; amounts stay positive like the phone's expenses. */
+export function fromCanonical(c: CanonicalMovement, today: string): Movement {
+  return {
+    id: c.id, date: c.date, type: c.type, rawCode: CODES[c.type] ?? '', amount: c.amount, isFuture: c.date > today,
+    assetId: c.assetId, toAssetId: c.toAssetId, accountName: c.accountName,
+    categoryId: c.categoryId, categoryName: c.categoryName, subcategoryId: c.subcategoryId, subcategoryName: c.subcategoryName,
+    content: c.content, detail: c.detail,
+  }
+}

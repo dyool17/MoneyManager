@@ -6,12 +6,15 @@ import { monthRange } from '../domain/insights'
 import { shiftMonth } from '../domain/format'
 import { loadBackupHistory } from '../infrastructure/backup-history'
 import { useSession } from './session'
+import { useAccountMetadata } from './metadata'
+import { fromCanonical } from '../domain/sync'
+import { dbMovements, dbStatus, scopeOf } from '../infrastructure/local-db'
 
 export type HistorySource = 'phone' | 'backup'
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
-/** Months of movements for reports. Kept in memory only, never saved to disk. */
+/** Months of movements for reports, from the local database when it holds this phone's history. */
 export const useHistory = defineStore('history', () => {
   const movements = shallowRef<Movement[]>([])
   const source = ref<HistorySource | null>(null)
@@ -59,13 +62,32 @@ export const useHistory = defineStore('history', () => {
 
   /** The last `months` whole months up to today, from whatever the session is connected to. */
   async function fromSession(months: number, today = new Date()) {
-    const session = useSession()
     const last = iso(today)
     const first = shiftMonth(last.slice(0, 8) + '01', -(months - 1)).startDate
     // Scheduled entries a year ahead feed the future commitments report.
     const ahead = shiftMonth(last.slice(0, 8) + '01', 12).endDate
-    await load('phone', () => session.getHistory({ startDate: first, endDate: ahead }), first, last)
+    await load('phone', () => readHistory(first, last, ahead), first, last)
     if (state.value === 'ready') await loadBudgets(first, last)
+  }
+
+  /**
+   * Older months come from the local database once the user has synced it; the phone stays the
+   * source from the current month on (and for scheduled entries). Without a database, or when it
+   * cannot be read, the whole span comes from the phone as before.
+   */
+  async function readHistory(first: string, last: string, ahead: string): Promise<Movement[]> {
+    const session = useSession()
+    const scope = scopeOf(useAccountMetadata().scope, session.bookId)
+    const stored = await dbStatus(scope).then((s) => s.movements > 0, () => false)
+    if (!stored) return session.getHistory({ startDate: first, endDate: ahead })
+    const current = last.slice(0, 8) + '01'
+    const [rows, recent] = await Promise.all([
+      dbMovements(scope, '0000-01-01', '9999-12-31'),
+      session.getHistory({ startDate: current, endDate: ahead }),
+    ])
+    const older = rows.filter((r) => r.date < current).map((r) => fromCanonical(r, last))
+    const seen = new Set(recent.map((m) => m.id))
+    return [...older.filter((m) => !seen.has(m.id)), ...recent]
   }
 
   async function loadBudgets(first: string, last: string) {
