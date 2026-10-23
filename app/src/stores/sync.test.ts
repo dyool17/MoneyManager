@@ -176,3 +176,22 @@ it('remembers the last phone scope across restarts so a backup can be previewed 
   expect(store.summary).toEqual([{ month: '2026-10', new: 1, modified: 0, deleted: 0 }])
   expect(dbApply).not.toHaveBeenCalled()
 })
+
+it('loads the database status and sync log for the scope without needing an acceptance first', async () => {
+  vi.mocked(dbStatus).mockResolvedValue({ movements: 5385, months: [], lastSync: '2026-10-23T22:00:00Z' })
+  vi.mocked(dbLog).mockResolvedValue([{ at: '2026-10-23T22:00:00Z', source: 'backup', added: 5385, modified: 0, deleted: 0, months: ['2026-10'] }])
+  const { store } = setup()
+  await store.refresh()
+  expect(dbStatus).toHaveBeenCalledWith('http://phone:8080|book')
+  expect(store.status?.movements).toBe(5385)
+  expect(store.log).toHaveLength(1)
+  expect(dbApply).not.toHaveBeenCalled()
+})
+
+it('refresh reports a database error instead of failing silently', async () => {
+  vi.mocked(dbStatus).mockRejectedValue(new Error('database is locked'))
+  const { store } = setup()
+  await store.refresh()
+  expect(store.status).toBeNull()
+  expect(store.error).toBe('database is locked')
+})

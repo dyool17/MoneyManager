@@ -2,6 +2,8 @@
 import { onMounted } from 'vue'
 import { t } from './i18n'
 import { useSession } from './stores/session'
+import SyncView from './components/SyncView.vue'
+import { useSync } from './stores/sync'
 import { useChat } from './stores/chat'
 import { SCREENS, useNav, type Screen } from './stores/nav'
 import { applyTheme } from './composables/theme'
@@ -20,9 +22,10 @@ import MilestonesView from './components/MilestonesView.vue'
 const session = useSession()
 const chat = useChat()
 const nav = useNav()
+const sync = useSync()
 
 const MAIN = SCREENS.filter((s) => s.id !== 'settings' && s.id !== 'help')
-const ICON: Record<Screen, IconName> = { today: 'today', money: 'money', spending: 'spending', analysis: 'analysis', milestones: 'milestones', settings: 'settings', help: 'help' }
+const ICON: Record<Screen, IconName> = { sync: 'sync', today: 'today', money: 'money', spending: 'spending', analysis: 'analysis', milestones: 'milestones', settings: 'settings', help: 'help' }
 
 onMounted(() => {
   applyTheme()
@@ -52,6 +55,10 @@ onMounted(() => {
 
       <button v-for="s in MAIN" :key="s.id" type="button" class="nav" :aria-current="nav.screen === s.id ? 'page' : undefined" @click="nav.go(s.id)">
         <Icon :name="ICON[s.id]" />{{ t(s.label) }}
+        <template v-if="s.id === 'sync'">
+          <small v-if="sync.summary.reduce((n, m) => n + m.new + m.modified + m.deleted, 0)" :aria-label="t('Incoming changes')">↓{{ sync.summary.reduce((n, m) => n + m.new + m.modified + m.deleted, 0) }}</small>
+          <small v-if="sync.outgoing.pending + sync.outgoing.unconfirmed" :aria-label="t('Outgoing changes')">↑{{ sync.outgoing.pending + sync.outgoing.unconfirmed }}</small>
+        </template>
       </button>
       <button v-if="chat.ready" type="button" class="nav" :aria-pressed="nav.askOpen" @click="nav.askOpen = !nav.askOpen">
         <Icon name="sparkle" />{{ t('Ask') }}
@@ -76,6 +83,7 @@ onMounted(() => {
       </div>
       <StatusBanner />
       <HelpView v-if="nav.screen === 'help'" />
+      <SyncView v-else-if="nav.screen === 'sync'" />
       <SettingsView v-else-if="nav.screen === 'settings' || !session.init" />
       <template v-else>
         <TodayView v-if="nav.screen === 'today'" />

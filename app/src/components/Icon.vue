@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /** 24px stroke icons drawn inline, so the app needs no icon font. */
 const PATHS = {
+  sync: 'M7 3v16M3 15l4 4 4-4M17 21V5M13 9l4-4 4 4',
   sparkle: 'M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z',
   milestones: 'M5 3v18M5 4h14l-3 4 3 4H5M9 17h10M9 21h6',
   today: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 8v4l3 2',

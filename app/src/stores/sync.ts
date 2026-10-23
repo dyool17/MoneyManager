@@ -176,6 +176,15 @@ export const useSync = defineStore('sync', () => {
     } catch (e) { if (token === generation) error.value = message(e) }
     finally { applying.value = false }
   }
+  /** Loads what the database already holds for this scope: counts, synced months and the sync log. */
+  async function refresh() {
+    if (!scope.value) return
+    const target = scope.value; const token = generation
+    try {
+      const [nextStatus, nextLog] = [await dbStatus(target), await dbLog(target, 50)]
+      if (token === generation) { status.value = nextStatus; log.value = nextLog }
+    } catch (e) { if (token === generation) error.value = message(e) }
+  }
   function keepLocal(id: string) {
     if (reading.value || applying.value || !conflicts.value.some(c => c.change.id === id)) return
     const next = new Map(pending.value); const snapshots = new Map(previews.value)
@@ -188,5 +197,5 @@ export const useSync = defineStore('sync', () => {
     }
     pending.value = next; previews.value = snapshots
   }
-  return { scope, pending, previews, summary, conflicts, outgoing, progress, reading, applying, error, disabledReason, status, log, read, readRecent, cancel, accept, keepLocal, previewBackup }
+  return { scope, refresh, pending, previews, summary, conflicts, outgoing, progress, reading, applying, error, disabledReason, status, log, read, readRecent, cancel, accept, keepLocal, previewBackup }
 })

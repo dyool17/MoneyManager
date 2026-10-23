@@ -10,6 +10,7 @@ const SCREENS: { id: Screen; title: string; text: string }[] = [
   { id: 'spending', title: 'Spending', text: 'One month of movements with categories and budgets. Filter by category, account or type; add, edit or delete movements, each shown for confirmation before it reaches the phone. When you type a note, the app suggests the category you used before for it. Below the categories: budgets imported from a phone backup (judged month by month or over the year), your recorded life events, and flagged possible bad decisions.' },
   { id: 'milestones', title: 'Milestones', text: 'Create and edit life events with affected and relieved categories. Confirm bad decisions in Spending and undo them here. The timeline shows separate totals and estimated milestone impacts against the median month before each event, using loaded history only.' },
   { id: 'analysis', title: 'Analysis', text: 'Reports across 3, 6 or 12 months in four tabs: Overview (health score, monthly report, savings goal), Risks, Opportunities and Patterns.' },
+  { id: 'sync', title: 'Sync', text: 'Incoming changes come from the phone or a backup; outgoing changes are your pending edits. Nothing is written locally until you accept. Sync never writes to the phone; only confirmed pending changes do.' },
   { id: 'settings', title: 'Settings', text: 'Connect the phone and keep backups, choose which accounts count toward totals and their currencies, set up the assistant, and pick a light or dark theme.' },
 ]
 
