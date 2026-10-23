@@ -8,6 +8,7 @@ import { useSession } from './session'
 import { useAccountMetadata } from './metadata'
 import { useLifeEvents } from './life-events'
 import { useBudgetPlans } from './budgets'
+import { useDecisions } from './decisions'
 import { useLiquid } from '../composables/liquid'
 import { languageName } from '../i18n'
 
@@ -68,6 +69,7 @@ export const useChat = defineStore('chat', () => {
   const metadata = useAccountMetadata()
   const lifeEvents = useLifeEvents()
   const budgetPlans = useBudgetPlans()
+  const decisions = useDecisions()
   const { liquid } = useLiquid()
 
   const context = computed(() => {
@@ -83,6 +85,7 @@ export const useChat = defineStore('chat', () => {
       budgets: history.budgets, includeDetails: settings.value.includeDetails,
       events: lifeEvents.state.events,
       plan: budgetPlans.state.plan, modes: budgetPlans.state.modes,
+      confirmed: decisions.confirmed,
     })
   })
 

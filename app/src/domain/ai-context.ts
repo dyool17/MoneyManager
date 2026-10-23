@@ -7,7 +7,8 @@ import { detectPatterns } from './patterns'
 import { forecast } from './forecast'
 import { budgetAmount, evaluateBudgets, type BudgetMode, type BudgetPlan } from './budget-plan'
 import { elapsedShare } from './budget'
-import { findBadDecisions, type BigReason } from './bad-decisions'
+import { findBadDecisions, type BigReason, type DecisionSnapshot } from './bad-decisions'
+import { eventImpact } from './milestone-impact'
 
 /**
  * The text the assistant reads. Built only from deterministic reports so every figure
@@ -28,6 +29,8 @@ export interface ContextInput {
   /** Budgets imported from a phone backup and the mode chosen per category. */
   plan?: BudgetPlan | null
   modes?: Record<string, BudgetMode>
+  /** Expenses the user confirmed as bad decisions; notes go in only when `includeDetails` is on. */
+  confirmed?: DecisionSnapshot[]
 }
 
 const BIG: Record<BigReason, string> = {
@@ -86,6 +89,26 @@ function advisorSections(input: ContextInput, add: (s?: string) => void) {
       const b = plan.budgets.find((x) => x.categoryId === s.categoryId)!
       const window = s.mode === 'annual' ? 'so far this year' : 'this month'
       add(`- ${s.name}${s.parent ? ` [${s.parent}]` : ''}: ${s.mode}, spent ${n(s.judgedSpent)} of ${n(s.judgedBudget)} ${window}, ${STATE[s.state]}; ${n(budgetAmount(b, month))} per month`)
+    }
+  }
+  const confirmed = [...(input.confirmed ?? [])].sort((a, b) => b.date.localeCompare(a.date))
+  if (confirmed.length) {
+    add()
+    add('## Confirmed bad decisions (the user agreed these were mistakes)')
+    for (const d of confirmed.slice(0, 30)) add(`- ${d.date} ${d.categoryName}${input.includeDetails && d.note ? ` "${oneLine(d.note)}"` : ''}: ${n(d.amount)}`)
+    add(`Total lost to confirmed bad decisions: ${n(confirmed.reduce((a, d) => a + d.amount, 0))}`)
+  }
+  if (events.length) {
+    add()
+    add('## Milestone impact (estimates: spending in the window minus the median month of the 6 months before)')
+    for (const e of [...events].sort((a, b) => b.start.localeCompare(a.start))) {
+      const impact = eventImpact(e, input.movements, input.last)
+      const range = e.end ? `${e.start} to ${e.end}` : `${e.start} onwards`
+      const label = input.includeDetails && e.label ? `"${oneLine(e.label)}" ` : ''
+      // Affected: extra spending (+) or less (-). Relieved: relief (+) or the opposite (-).
+      const signed = (v: number) => `${v >= 0 ? '+' : '-'}${n(Math.abs(v))}`
+      const parts = impact.categories.map((c) => `${c.name}${c.direction === 'relieved' ? ' relief' : ''} ${c.delta === null ? 'not enough history' : signed(c.delta)}`)
+      add(`- ${label}${range} ${e.kind}: extra cost ${n(impact.extraCost)}, relief ${n(impact.relief)}, net ${n(impact.net)}; ${parts.join(', ')}`)
     }
   }
   const flags = findBadDecisions({ movements: input.movements, plan: plan ?? null, modes: input.modes ?? {}, events, month })

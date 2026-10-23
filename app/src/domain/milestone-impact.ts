@@ -53,7 +53,8 @@ export function eventImpact(event: LifeEvent, movements: Movement[], today: stri
     const delta = baseline === null ? null : round(direction === 'affected' ? actual - baseline : baseline - actual)
     return { id, name, direction, actual, baseline, delta }
   })
-  const sum = (direction: CategoryImpact['direction']) => round(categories.filter(c => c.direction === direction).reduce((s, c) => s + Math.max(0, c.delta ?? 0), 0))
+  // Signed on purpose: an affected category that went down lowers the cost, a relieved one that went up lowers the relief.
+  const sum = (direction: CategoryImpact['direction']) => round(categories.filter(c => c.direction === direction).reduce((s, c) => s + (c.delta ?? 0), 0))
   const extraCost = sum('affected')
   const relief = sum('relieved')
   return { categories, extraCost, relief, net: round(extraCost - relief), windowDays, open: event.end === undefined }

@@ -97,6 +97,28 @@ describe('AI context', () => {
     expect(buildContext({ ...input, includeDetails: true })).toContain('"Fancy watch"')
   })
 
+  it('adds confirmed bad decisions and the estimated impact of each milestone, with notes and labels gated', () => {
+    const gift = (d: string, amount: number) => ({ ...mv(d, amount, 'expense', 'gift shop'), categoryId: 'var', categoryName: 'Variable', subcategoryId: 'gifts', subcategoryName: 'Gifts' })
+    const history = ['2026-03-05', '2026-04-05', '2026-05-05', '2026-06-05', '2026-07-05', '2026-08-05'].map((d) => gift(d, 100))
+    const events: LifeEvent[] = [{ id: 'e1', label: 'Baby arrived', start: '2026-09-01', end: '2026-09-30', categoryIds: ['gifts'], kind: 'temporary' }]
+    const confirmed = [{ id: 'm9', date: '2026-10-11', amount: 876.4, categoryId: 'gifts', categoryName: 'Gifts', note: 'Fancy watch' }]
+    const input = { ...base, first: '2026-03-01', movements: [...base.movements, ...history, gift('2026-09-10', 400)], events, confirmed }
+    const plain = buildContext({ ...input, includeDetails: false })
+    expect(plain).toContain('## Confirmed bad decisions (the user agreed these were mistakes)')
+    expect(plain).toContain('- 2026-10-11 Gifts: 876.40')
+    expect(plain).toContain('Total lost to confirmed bad decisions: 876.40')
+    expect(plain).not.toContain('Fancy watch')
+    expect(plain).toContain('## Milestone impact (estimates: spending in the window minus the median month of the 6 months before)')
+    expect(plain).toMatch(/- 2026-09-01 to 2026-09-30 temporary: extra cost 300\.00, relief 0\.00, net 300\.00; Gifts \+300\.00/)
+    expect(plain).not.toContain('Baby arrived')
+    // A relieved category that went up is shown as negative relief, never as a saving.
+    const up = buildContext({ ...input, events: [{ ...events[0]!, categoryIds: [], relieved: ['gifts'] }], includeDetails: false })
+    expect(up).toMatch(/- 2026-09-01 to 2026-09-30 temporary: extra cost 0\.00, relief -300\.00, net 300\.00; Gifts relief -300\.00/)
+    const shared = buildContext({ ...input, includeDetails: true })
+    expect(shared).toContain('- 2026-10-11 Gifts "Fancy watch": 876.40')
+    expect(shared).toMatch(/- "Baby arrived" 2026-09-01 to 2026-09-30 temporary: extra cost 300\.00/)
+  })
+
   it('keeps transaction descriptions out unless allowed', () => {
     expect(buildContext({ ...base, includeDetails: false })).not.toContain('Secret Shop')
     const detailed = buildContext({ ...base, includeDetails: true })

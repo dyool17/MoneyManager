@@ -15,15 +15,21 @@ it('estimates affected costs and relief from six whole median months, excluding 
     ], extraCost: 50, relief: 60, net: -10, windowDays: 31, open: false,
   })
 })
-it('prorates inclusive calendar days, ends open windows today and clamps negative costs and relief', () => {
+it('prorates inclusive calendar days, ends open windows today and keeps deltas that go against the milestone', () => {
   const open = { ...event, end: undefined }
   const result = eventImpact(open, movements, '2026-07-15')
   expect(result.windowDays).toBe(15)
   expect(result.open).toBe(true)
   expect(result.categories[0]!.baseline).toBeCloseTo(100 * 15 / 31, 2)
   const reversed = eventImpact(event, [...history, mv('2026-07-01', 10), mv('2026-07-01', 120, 'r')], '2026-08-01')
-  expect(reversed.extraCost).toBe(0)
-  expect(reversed.relief).toBe(0)
+  // The affected category went down and the relieved one went up: the estimate shows both, it never hides them.
+  const affected = reversed.categories.find((c) => c.direction === 'affected')!
+  const relieved = reversed.categories.find((c) => c.direction === 'relieved')!
+  expect(affected.delta).toBeLessThan(0)
+  expect(relieved.delta).toBeLessThan(0)
+  expect(reversed.extraCost).toBe(affected.delta)
+  expect(reversed.relief).toBe(relieved.delta)
+  expect(reversed.net).toBe(Math.round((affected.delta! - relieved.delta!) * 100) / 100)
   expect(eventImpact({ ...event, start: '2027-01-01', end: undefined }, movements, '2026-08-01').windowDays).toBe(0)
 })
 it('requires three historical months, includes zero-spend months after history begins and matches subcategories', () => {
