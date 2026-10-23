@@ -1,12 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-export type Screen = 'today' | 'money' | 'spending' | 'analysis' | 'settings' | 'help'
+export type Screen = 'today' | 'money' | 'spending' | 'analysis' | 'milestones' | 'settings' | 'help'
 
 export const SCREENS: { id: Screen; label: string; hint: string }[] = [
   { id: 'today', label: 'Today', hint: 'How this month is going' },
   { id: 'money', label: 'Money', hint: 'Net worth, accounts and cards' },
   { id: 'spending', label: 'Spending', hint: 'Movements, categories and budgets' },
+  { id: 'milestones', label: 'Milestones', hint: 'Life events and confirmed bad decisions, with their money impact' },
   { id: 'analysis', label: 'Analysis', hint: 'Health, risks, opportunities and patterns' },
   { id: 'settings', label: 'Settings', hint: 'Phone, accounts, AI and backups' },
   { id: 'help', label: 'Help', hint: 'How the app works' },

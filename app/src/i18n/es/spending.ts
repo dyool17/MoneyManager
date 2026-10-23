@@ -1,4 +1,6 @@
 export default {
+  'Confirm bad decision': 'Confirmar mala decisión',
+  'Manage milestones': 'Gestionar hitos',
   'Spending': 'Gastos',
   'Income': 'Ingresos',
   'Expense': 'Gasto',

@@ -6,6 +6,7 @@ import { useSession } from '../../stores/session'
 import { useBudgetPlans } from '../../stores/budgets'
 import { useLifeEvents } from '../../stores/life-events'
 import { useDecisions } from '../../stores/decisions'
+import { useNav } from '../../stores/nav'
 import { findBadDecisions } from '../../domain/bad-decisions'
 import { formatDate, formatMoney } from '../../domain/format'
 
@@ -13,6 +14,7 @@ const session = useSession()
 const plans = useBudgetPlans()
 const events = useLifeEvents()
 const dismissed = useDecisions()
+const nav = useNav()
 
 const month = computed(() => session.period.startDate.slice(0, 7))
 const nameOf = (id: string) => plans.state.plan?.budgets.find((b) => b.categoryId === id)?.name
@@ -39,9 +41,17 @@ function intoEvent(d: (typeof decisions.value)[number]) {
   try {
     events.add({ label: m.content?.slice(0, 80) || t('{category} spike', { category: m.subcategoryName || m.categoryName || t('Expense') }), start: m.date, categoryIds: id ? [id] : [], kind: 'one-off' })
     dismissed.dismiss(m.id)
+    nav.go('milestones')
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
   }
+}
+function confirm(d: (typeof decisions.value)[number]) {
+  error.value = ''
+  const m = d.movement
+  try {
+    dismissed.confirm({ id: m.id, date: m.date, amount: m.amount, categoryId: m.subcategoryId ?? m.categoryId, categoryName: m.subcategoryName || m.categoryName || t('Uncategorized'), note: m.content })
+  } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
 }
 </script>
 
@@ -62,6 +72,7 @@ function intoEvent(d: (typeof decisions.value)[number]) {
           <span class="num amount">{{ formatMoney(d.movement.amount) }}</span>
           <span class="muted small">{{ d.big.map((r) => t(REASON[r])).join(' · ') }}</span>
           <AiButton :question="t('Was this expense a bad decision? {date} {category} {amount} ({reasons}). Explain and suggest what to do.', { date: formatDate(d.movement.date), category: d.movement.subcategoryName || d.movement.categoryName || '', amount: formatMoney(d.movement.amount), reasons: d.big.map((r) => t(REASON[r])).join(', ') })" :about="t('Possible bad decision')" compact>{{ t('Why?') }}</AiButton>
+          <button type="button" @click="confirm(d)">{{ t('Confirm bad decision') }}</button>
           <button v-if="d.movement.subcategoryId || d.movement.categoryId" type="button" @click="intoEvent(d)">{{ t('Life event') }}</button>
           <button type="button" class="hint" @click="dismissed.dismiss(d.movement.id)">{{ t('Dismiss') }}</button>
         </span>

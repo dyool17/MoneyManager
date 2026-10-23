@@ -15,13 +15,14 @@ import SpendingView from './components/SpendingView.vue'
 import AnalysisView from './components/AnalysisView.vue'
 import SettingsView from './components/SettingsView.vue'
 import HelpView from './components/HelpView.vue'
+import MilestonesView from './components/MilestonesView.vue'
 
 const session = useSession()
 const chat = useChat()
 const nav = useNav()
 
 const MAIN = SCREENS.filter((s) => s.id !== 'settings' && s.id !== 'help')
-const ICON: Record<Screen, IconName> = { today: 'today', money: 'money', spending: 'spending', analysis: 'analysis', settings: 'settings', help: 'help' }
+const ICON: Record<Screen, IconName> = { today: 'today', money: 'money', spending: 'spending', analysis: 'analysis', milestones: 'milestones', settings: 'settings', help: 'help' }
 
 onMounted(() => {
   applyTheme()
@@ -81,6 +82,7 @@ onMounted(() => {
         <MoneyView v-else-if="nav.screen === 'money'" />
         <SpendingView v-else-if="nav.screen === 'spending'" />
         <AnalysisView v-else-if="nav.screen === 'analysis'" />
+        <MilestonesView v-else-if="nav.screen === 'milestones'" />
       </template>
     </main>
 
