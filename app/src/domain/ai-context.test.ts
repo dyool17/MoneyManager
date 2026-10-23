@@ -54,6 +54,49 @@ describe('AI context', () => {
     expect(withEvents).toContain('- 2026-09: 1000.00 / 600.00 / 400.00')
   })
 
+  it('gives the advisor the monthly history, patterns, income pattern, rhythm and a six-month forecast', () => {
+    const text = buildContext({ ...base, includeDetails: false })
+    expect(text).toContain('## Spending by category per month')
+    expect(text).toContain('Months: 2026-09, 2026-10')
+    expect(text).toContain('- Food [Variable]: 100, 50')
+    expect(text).toContain('## Patterns by category')
+    expect(text).toMatch(/- Food \[Variable\]: typical 75\.00, trend n\/a, volatility [\d.]+%, seasonal none, last 3 months [\d.]+x typical/)
+    expect(text).toContain('## Income pattern')
+    expect(text).toContain('- Typical monthly income: 1000.00')
+    expect(text).toContain('## Spending rhythm inside the month')
+    expect(text).toContain('## Forecast (current month and the next 6; estimates from the patterns, not targets)')
+    expect(text).toMatch(/- 2026-10: spending [\d.]+, income [\d.]+, net -?[\d.]+/)
+    expect(text).toMatch(/- 2027-04: spending [\d.]+, income [\d.]+, net -?[\d.]+/)
+    expect(text).toMatch(/Cumulative net over the forecast: -?[\d.]+/)
+  })
+
+  it('names regular income sources only when descriptions are shared', () => {
+    const salary = (d: string) => ({ ...mv(d, 1000, 'income', 'ACME payroll'), categoryName: 'Salary', subcategoryName: undefined })
+    const months = ['2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01']
+    const input = { ...base, first: '2026-06-01', movements: [...months.map(salary), mv('2026-09-02', 100), mv('2026-10-03', 50)] }
+    const plain = buildContext({ ...input, includeDetails: false })
+    expect(plain).toMatch(/- Regular source: 1000\.00 around day 1, in 5 months/)
+    expect(plain).not.toContain('ACME payroll')
+    expect(buildContext({ ...input, includeDetails: true })).toMatch(/- "ACME payroll": 1000\.00 around day 1, in 5 months/)
+  })
+
+  it('includes imported budgets with their mode and state, and flagged possible bad decisions', () => {
+    const gift = { ...mv('2026-10-04', 180, 'expense', 'Fancy watch'), categoryId: 'var', categoryName: 'Variable', subcategoryId: 'gifts', subcategoryName: 'Gifts' }
+    const plan = { importedAt: '2026-10-01T00:00:00.000Z', budgets: [{ categoryId: 'gifts', name: 'Gifts', parent: 'Variable', amount: 200, overrides: {} }] }
+    const input = { ...base, movements: [...base.movements, gift], plan, modes: {} }
+    const plain = buildContext({ ...input, includeDetails: false })
+    expect(plain).toContain('## Imported budgets (')
+    expect(plain).toMatch(/- Gifts \[Variable\]: monthly, spent 180\.00 of 200\.00 this month, (on track|spending fast|over budget); 200\.00 per month/)
+    const annual = buildContext({ ...input, modes: { gifts: 'annual' as const }, includeDetails: false })
+    expect(annual).toMatch(/- Gifts \[Variable\]: annual, spent 180\.00 of 2000\.00 so far this year, (on track|spending fast|over budget); 200\.00 per month/)
+    // Inside the year's allowance the spike is covered, so it is not flagged.
+    expect(annual).not.toContain('## Possible bad decisions flagged by fixed rules')
+    expect(plain).toContain('## Possible bad decisions flagged by fixed rules')
+    expect(plain).toMatch(/- 2026-10-04 Gifts: 180\.00 \(large share of its budget/)
+    expect(plain).not.toContain('Fancy watch')
+    expect(buildContext({ ...input, includeDetails: true })).toContain('"Fancy watch"')
+  })
+
   it('keeps transaction descriptions out unless allowed', () => {
     expect(buildContext({ ...base, includeDetails: false })).not.toContain('Secret Shop')
     const detailed = buildContext({ ...base, includeDetails: true })

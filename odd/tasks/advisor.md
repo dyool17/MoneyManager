@@ -20,7 +20,7 @@ Objective: give the assistant the history, detected patterns and multi-month pro
 |---|---|---|---|---|
 | T1 | S2 | worker | done | (this commit) |
 | T2 | S3 | worker | done | (this commit) |
-| T3 | S1, S4, S5 | inline | pending | |
+| T3 | S1, S4, S5 | inline | done | (this commit) |
 | T4 | S1-S5 | inline | pending | real-backup context probe, build, install, launch |
 
 ## Log
@@ -28,6 +28,7 @@ Objective: give the assistant the history, detected patterns and multi-month pro
 - L1 (2026-10-23): "la IA no es lo que espero, es superficial. boba. no recibe ni utiliza el contexto historico, quiero que detecte patrones de gastos, que proyecte basandose en ellos y en la info, quiero un asesor financiero no un chatbot que filtre y summarice cosas."
 - L2 (2026-10-23): Verified against the user's real backup (several thousand movements over about three years, incl. scheduled): today's context is ~6,060 chars / 109 lines of 12-month aggregates; per category only a yearly total and a 3-vs-3-month change, so no seasonality or trend is detectable; imported budgets, bad-decision flags, income pattern and multi-month projections are absent; SYSTEM_PROMPT asks to "Be concrete and brief … one to three actions". Design decided by the parent (technical, no product fork): pattern engine + forecast as pure domain modules, richer context, advisor prompt.
 - L3 (2026-10-23): T1-T2 done by worker (patterns.ts, forecast.ts, 10 tests, suite 183/183). Worker assumptions: similar income = within 10% of median; clear trend = R² ≥ 0.6; rhythm interpolates between day-10/20 anchors; new-normal baseline averages covered months; income = max(typical, actual + scheduled). BudgetPlan is accepted by forecast() but not used: budgets are a reference, joined by category key in the context (T3), never a spending target. Real-backup probe: 24 months, 23 categories; two regular salary sources on fixed pay days; seasonality e.g. Comidas fuera 01,12, Regalos 04,07,10,12; Transporte recent 7.5x typical; rhythm 55% by day 10; the current month and the 6-month cumulative net are negative.
+- L4 (2026-10-23): T3 done. ai-context.ts: advisorSections (category x month table, patterns, income pattern with source labels only when descriptions are shared, rhythm, 7-month forecast with basis and cumulative net, imported budgets with mode/state, flagged possible bad decisions with notes only when shared); SYSTEM_PROMPT rewritten as a personal financial advisor (diagnose patterns, project, prioritized plan with monthly/yearly impact, challenge assumptions, proactive lookups, depth over brevity). chat.ts: 24-month window (advisorStart), loads older months from the phone once via history.extend (reads only), passes the imported plan and modes. Tests: 4 new context tests + advisor window test; suite 187/187, vue-tsc clean. Real-backup probe: context 21.4k chars / 231 lines, 24 months, 20 budgets, 4 flags this month, no descriptions leaked. Watch item: one category forecasts a large February amount as seasonal (spiked in Feb two years running) - the line states its basis so the advisor can question it.
 
 ## Contract for T1-T2 (pure domain, no Vue, no stores)
 

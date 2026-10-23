@@ -7,6 +7,7 @@ import { useHistory } from './history'
 import { useSession } from './session'
 import { useAccountMetadata } from './metadata'
 import { useLifeEvents } from './life-events'
+import { useBudgetPlans } from './budgets'
 import { useLiquid } from '../composables/liquid'
 import { languageName } from '../i18n'
 
@@ -44,6 +45,13 @@ export interface ChatMessage extends AiMessage { lookups?: string[] }
 /** How far back a lookup may load from the phone. */
 const MAX_MONTHS_BACK = 24
 
+/** First day of the 24-month window the advisor reads, ending at `last`. */
+export function advisorStart(last: string): string {
+  const [y, m] = last.split('-').map(Number)
+  const d = new Date(y, m - 24, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+}
+
 /** The conversation lives in memory only; settings (never the API key) are remembered. */
 export const useChat = defineStore('chat', () => {
   const settings = ref<ChatSettings>(readSettings())
@@ -59,22 +67,22 @@ export const useChat = defineStore('chat', () => {
   const session = useSession()
   const metadata = useAccountMetadata()
   const lifeEvents = useLifeEvents()
+  const budgetPlans = useBudgetPlans()
   const { liquid } = useLiquid()
 
   const context = computed(() => {
     if (history.state !== 'ready') return ''
     const debts = metadata.totals.debts ?? session.dashboard?.debts ?? null
-    const first = (() => {
-      const [y, m] = history.span.last.split('-').map(Number)
-      const d = new Date(y, m - 12, 1)
-      const start = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
-      return start < history.span.first ? history.span.first : start
-    })()
+    // The advisor reads up to 24 months: everything loaded, capped there.
+    const loaded = history.movements.reduce((min, m) => (m.date < min ? m.date : min), history.span.first)
+    const start = advisorStart(history.span.last)
+    const first = start < loaded ? loaded.slice(0, 8) + '01' : start
     return buildContext({
       movements: history.movements, first, last: history.span.last,
       currency: metadata.state.baseCurrency, liquid: session.assets.length ? liquid.value : null, debts,
       budgets: history.budgets, includeDetails: settings.value.includeDetails,
       events: lifeEvents.state.events,
+      plan: budgetPlans.state.plan, modes: budgetPlans.state.modes,
     })
   })
 
@@ -112,6 +120,10 @@ export const useChat = defineStore('chat', () => {
 
   async function ensureContext(): Promise<string | null> {
     if (history.state === 'idle') await history.fromSession(12)
+    // Older months come from the phone once (reads only); a backup already holds them.
+    if (history.state === 'ready' && history.source === 'phone') {
+      try { await history.extend(advisorStart(history.span.last)) } catch { /* the advisor works with what is loaded */ }
+    }
     return context.value || null
   }
 
