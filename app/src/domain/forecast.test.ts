@@ -32,6 +32,15 @@ it('uses clear trend only, and replaces baselines for temporary and new-normal e
     if (kind === 'temporary') expect(f.months[2]!.lines[0]!.basis).not.toContain('event')
   }
 })
+it('applies temporary and new-normal averages to relieved categories', () => {
+  const movements = Array.from({ length: 6 }, (_, i) => mv(`2025-0${i + 1}-10`, i < 4 ? 100 : 40))
+  for (const kind of ['temporary', 'new-normal'] as const) {
+    const events = [{ id: 'e', label: '', categoryIds: [], relieved: ['c'], start: '2025-05-01', end: kind === 'temporary' ? '2025-08-31' : undefined, kind }]
+    const f = forecast({ patterns: detectPatterns(movements, '2025-01', '2025-06'), movements, today: '2025-07-31', horizon: 2, events })
+    expect(f.months[1]!.lines[0]).toMatchObject({ amount: 40, basis: ['typical', kind === 'temporary' ? 'event' : 'new-normal'] })
+    if (kind === 'temporary') expect(f.months[2]!.lines[0]!.basis).not.toContain('event')
+  }
+})
 it('rounds cents, uses rhythm interpolation and ignores future entries and transfers as actual', () => {
   const movements = [mv('2025-01-05', 20), mv('2025-01-15', 30), mv('2025-01-25', 50)]
   const patterns = detectPatterns(movements, '2025-01', '2025-01')

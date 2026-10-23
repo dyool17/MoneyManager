@@ -18,6 +18,8 @@ export interface LifeEvent {
   end?: string
   /** Category or subcategory ids the event explains, matched like budgets do. */
   categoryIds: string[]
+  relieved?: string[]
+  expected?: Record<string, number>
   kind: EventKind
 }
 
@@ -31,6 +33,10 @@ export const covers = (e: LifeEvent, date: string): boolean => date >= e.start &
 /** Whether the event explains spending on this movement: the date falls inside and the category is listed. */
 export const coversMovement = (e: LifeEvent, m: Movement): boolean =>
   covers(e, m.date) && (m.categoryId !== undefined && e.categoryIds.includes(m.categoryId) || m.subcategoryId !== undefined && e.categoryIds.includes(m.subcategoryId))
+
+/** Whether an affected or relieved category participates in the event window. */
+export const involves = (e: LifeEvent, m: Movement): boolean =>
+  coversMovement(e, m) || covers(e, m.date) && [m.categoryId, m.subcategoryId].some(id => id !== undefined && e.relieved?.includes(id))
 
 /**
  * One-off spikes do not describe the normal month, so their spending inside the event window is
@@ -70,7 +76,8 @@ export function describeEvents(events: LifeEvent[], first: string, last: string,
     const cats = e.categoryIds.map((id) => names.get(id) ?? id).join(', ')
     const range = e.end ? `${e.start} to ${e.end}` : `${e.start} onwards`
     const label = includeDetails && e.label ? `"${e.label}" ` : ''
-    lines.push(`- ${label}${range}: ${KIND_TEXT[e.kind].replace('one-off', `One-off in ${cats}`).replace('new normal', `New normal in ${cats}`).replace('temporary', `Temporary in ${cats}`)}`)
+    const relieved = e.relieved?.length ? `; relieves ${e.relieved.map(id => names.get(id) ?? id).join(', ')}` : ''
+    lines.push(`- ${label}${range}: ${KIND_TEXT[e.kind].replace('one-off', `One-off in ${cats}`).replace('new normal', `New normal in ${cats}`).replace('temporary', `Temporary in ${cats}`)}${relieved}`)
   }
   return lines
 }
@@ -81,11 +88,15 @@ export function validateLifeEvents(raw: unknown): LifeEventState {
   if (!raw || typeof raw !== 'object' || !('events' in raw) || !Array.isArray((raw as LifeEventState).events)) fail()
   for (const e of (raw as LifeEventState).events) {
     if (!e || typeof e !== 'object') fail()
-    const { id, label, start, end, categoryIds, kind } = e as unknown as Record<string, unknown> & Partial<LifeEvent>
+    const { id, label, start, end, categoryIds, relieved, expected, kind } = e as unknown as Record<string, unknown> & Partial<LifeEvent>
     if (typeof id !== 'string' || !id || typeof label !== 'string' || typeof start !== 'string' || !DATE.test(start)) fail()
     if (end !== undefined && (typeof end !== 'string' || !DATE.test(end))) fail()
     if (typeof end === 'string' && end < start) fail()
-    if (!Array.isArray(categoryIds) || !categoryIds.length || !categoryIds.every((c) => typeof c === 'string' && c)) fail()
+    if (!Array.isArray(categoryIds) || !categoryIds.every((c) => typeof c === 'string' && c)) fail()
+    if (relieved !== undefined && (!Array.isArray(relieved) || !relieved.every(c => typeof c === 'string' && c))) fail()
+    const involved = [...categoryIds, ...(relieved ?? [])]
+    if (!involved.length) fail()
+    if (expected !== undefined && (!expected || typeof expected !== 'object' || Array.isArray(expected) || !Object.entries(expected).every(([id, amount]) => involved.includes(id) && typeof amount === 'number' && Number.isFinite(amount) && amount > 0))) fail()
     if (typeof kind !== 'string' || !KINDS.includes(kind as EventKind)) fail()
   }
   return raw as LifeEventState

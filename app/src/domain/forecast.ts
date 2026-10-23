@@ -2,7 +2,7 @@ import type { Movement } from './types'
 import type { Patterns } from './patterns'
 import { countable, monthRange, recurringCharges } from './insights'
 import { futureCommitments } from './health'
-import { coversMovement, type LifeEvent } from './life-events'
+import { involves, type LifeEvent } from './life-events'
 import type { BudgetPlan } from './budget-plan'
 
 export type ForecastBasis = 'typical' | 'seasonal' | 'trend' | 'scheduled' | 'event' | 'new-normal'
@@ -41,10 +41,10 @@ export function forecast(input: { patterns: Patterns; movements: Movement[]; tod
       let amount = c?.typical ?? 0
       // Budgets remain external references: the contracted output has no budget field.
       const matching = history.filter(m => m.type === 'expense' && key(m) === id)
-      const event = [...events].filter(e => e.kind !== 'one-off' && e.start <= `${month}-31` && (e.kind === 'new-normal' || !e.end || e.end >= `${month}-01`) && matching.some(m => coversMovement(e, m))).sort((a, b) => b.start.localeCompare(a.start))[0]
+      const event = [...events].filter(e => e.kind !== 'one-off' && e.start <= `${month}-31` && (e.kind === 'new-normal' || !e.end || e.end >= `${month}-01`) && matching.some(m => involves(e, m))).sort((a, b) => b.start.localeCompare(a.start))[0]
       if (event) {
         const eventMonths = patterns.months.filter(k => k >= event.start.slice(0, 7) && (!event.end || k <= event.end.slice(0, 7)))
-        if (eventMonths.length) amount = average(eventMonths.map(k => matching.filter(m => m.date.startsWith(k) && coversMovement(event, m)).reduce((s, m) => s + m.amount, 0)))
+        if (eventMonths.length) amount = average(eventMonths.map(k => matching.filter(m => m.date.startsWith(k) && involves(event, m)).reduce((s, m) => s + m.amount, 0)))
         basis.push(event.kind === 'new-normal' ? 'new-normal' : 'event')
       } else if (c) {
         if (c.seasonal.includes(month.slice(5))) {

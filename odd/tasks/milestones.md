@@ -16,7 +16,7 @@ Objective: phase 1 of the plan agreed on 2026-10-23 — a module to create and e
 
 | ID | Specs | Route | Status | Commit |
 |---|---|---|---|---|
-| T1 | S1, S3 (domain/store), S5, S7 | worker | pending | |
+| T1 | S1, S3 (domain/store), S5, S7 | worker | done | (next commit) |
 | T2 | S2, S3 (UI), S4 | worker | pending | |
 | T3 | S6 | inline | pending | |
 | T4 | S1-S7 | inline | pending | build, install, launch |
@@ -25,6 +25,7 @@ Objective: phase 1 of the plan agreed on 2026-10-23 — a module to create and e
 
 - L1 (2026-10-23): "que opinas que tengamos una db local con toda la info, con un motor de sincronizacion y desde la app poder ver como si fuera git, cuantas transacciones enviamos y cuantas traemos e ir confirmando. la ia tendria acceso a metricas y estadisticas deterministas generadas por periodos y agrupadas. ademas quiero un modulo de para crear y editar los hitos personales poder seleccionar las categorias que sufrieron o se veran afectadas y cuales aliviadas, quiero algo como poder ver la timeline de hitos/malas decisiones confirmadas con el total de dinero asi ver como afectaron a mi economia"
 - L2 (2026-10-23): Parent proposed three phases (1 milestones + timeline, 2 local DB + git-like sync, 3 materialized metrics) and recommended phase 1 first. User: "si hagemole". Model decision (parent, technical): keep `categoryIds` as affected for backward compatibility; add `relieved` and `expected`.
+- L3 (2026-10-23): T1 done by worker (suite 197/197). Assumptions recorded: proration uses calendar-month day fractions; a baseline needs 3 distinct spending months within the 6-month window (zero-spend months count in the median); aggregate extraCost and relief are clamped at zero (an affected category that went down is not counted as relief); confirmed snapshots are also hidden from pending flags, explicit dismissals stay after undo. Parent moved `DecisionSnapshot` to domain/bad-decisions.ts so domain no longer imports stores.
 
 ## Contract for T1
 

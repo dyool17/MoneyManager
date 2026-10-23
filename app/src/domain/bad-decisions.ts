@@ -10,6 +10,16 @@ import { coversMovement, type LifeEvent } from './life-events'
  * the expense into a life event.
  */
 
+/** A confirmed bad decision, kept locally so it survives when its month is no longer loaded. */
+export interface DecisionSnapshot {
+  id: string
+  date: string
+  amount: number
+  categoryId?: string
+  categoryName: string
+  note?: string
+}
+
 export type BigReason = 'outlier' | 'large-share' | 'over-budget'
 
 export interface BadDecision {

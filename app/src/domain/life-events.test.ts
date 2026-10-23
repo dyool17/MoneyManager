@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  covers, coversMovement, describeEvents, excludeOneOffFromBaseline, validateLifeEvents,
+  covers, coversMovement, involves, describeEvents, excludeOneOffFromBaseline, validateLifeEvents,
   type LifeEvent,
 } from './life-events'
 import type { Movement } from './types'
@@ -14,6 +14,20 @@ const mv = (over: Partial<Movement>): Movement => ({
 })
 
 describe('life events', () => {
+  it('loads legacy and relieved-only events, validates expectations, and never explains relieved spikes', () => {
+    const event = ev({ categoryIds: [], relieved: ['food'], expected: { food: 50 } })
+    expect(validateLifeEvents({ events: [event, ev({})] })).toEqual({ events: [event, ev({})] })
+    for (const over of [{ relieved: [''] }, { relieved: undefined }, { expected: { other: 1 } }, ...[0, -1, Infinity, NaN].map(n => ({ expected: { food: n } }))]) {
+      expect(() => validateLifeEvents({ events: [{ ...event, ...over }] })).toThrow('Invalid saved life events.')
+    }
+    const movement = mv({ categoryId: 'var', subcategoryId: 'food' })
+    expect(involves(event, movement)).toBe(true)
+    expect(involves(event, { ...movement, date: '2026-04-01' })).toBe(false)
+    expect(coversMovement(event, movement)).toBe(false)
+    expect(excludeOneOffFromBaseline([{ month: '2026-03', expense: 100, income: 0, net: -100 }], [event], [movement])).toEqual([{ month: '2026-03', expense: 100, income: 0, net: -100 }])
+    expect(describeEvents([event], '2026-03-01', '2026-03-31', false, new Map([['food', 'Food']])).join('\n')).toContain('relieves Food')
+  })
+
   it('covers dates inside the window and events affect listed category or subcategory ids', () => {
     expect(covers(ev({}), '2026-02-28')).toBe(false)
     expect(covers(ev({}), '2026-03-01')).toBe(true)
