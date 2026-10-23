@@ -17,7 +17,7 @@ Objective: phase 2 of the plan agreed on 2026-10-23 — keep the whole history i
 
 | ID | Specs | Route | Status | Commit |
 |---|---|---|---|---|
-| T1 | S3, S5, S6 | worker | pending | domain: canonical movement + month diff + conflicts |
+| T1 | S3, S5, S6 | worker | done | 6b81f65 |
 | T2 | S1, S2 | worker | pending | Rust SQLite store + Tauri commands |
 | T3 | S2, S3, S4, S8 | worker | pending | sync engine store (read, compare, hold, apply, resume) + bootstrap |
 | T4 | S3, S4, S5 | worker | pending | Sync screen (incoming / outgoing / conflicts) |
