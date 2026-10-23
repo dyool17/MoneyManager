@@ -21,7 +21,7 @@ Objective: give the assistant the history, detected patterns and multi-month pro
 | T1 | S2 | worker | done | (this commit) |
 | T2 | S3 | worker | done | (this commit) |
 | T3 | S1, S4, S5 | inline | done | (this commit) |
-| T4 | S1-S5 | inline | pending | real-backup context probe, build, install, launch |
+| T4 | S1-S5 | inline | done | probe on real backup; AppImage built, installed and launched |
 
 ## Log
 
