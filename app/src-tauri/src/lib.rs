@@ -1,4 +1,5 @@
 mod ai;
+mod db;
 mod backup;
 mod export;
 #[cfg(test)]
@@ -179,7 +180,7 @@ async fn ai_chat(app: tauri::AppHandle, request: ai::ChatRequest) -> Result<Stri
 pub fn run() {
     tauri::Builder::default()
         .manage(PcManager::new())
-        .invoke_handler(tauri::generate_handler![mm_read, mm_backup, mm_export_csv, mm_write, ai_status, ai_set_key, ai_chat])
+        .invoke_handler(tauri::generate_handler![db::db_status, db::db_movements, db::db_apply, db::db_log, mm_read, mm_backup, mm_export_csv, mm_write, ai_status, ai_set_key, ai_chat])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
