@@ -61,3 +61,18 @@ export function conflicts(changes: IncomingChange[], outbox: { id: string; label
 //  - a change conflicts when a pending update/delete targets the same movement id (update-transaction/update-transfer `id`, delete-transactions `ids`)
 export function summarize(changes: IncomingChange[]): { month: string; new: number; modified: number; deleted: number }[]
 ```
+
+## Contract for T2 (Rust store + TypeScript wrapper)
+
+- Dependency: `rusqlite` with the `bundled` feature (no system SQLite needed on Linux or Windows). File `<app data dir>/money.db`, WAL mode, `PRAGMA user_version` migrations (version 1 = this schema). Only this module opens the file.
+- Schema v1 (all rows keyed by `scope` = phone origin + "|" + book id, so two phones or books never mix):
+  - `movements(scope, id, month, date, type, amount_cents INTEGER, asset_id, to_asset_id, category_id, subcategory_id, content, detail, account_name, category_name, subcategory_name, PRIMARY KEY(scope, id))`, index on `(scope, month)`.
+  - `months(scope, month, read_at, fingerprint, rows, PRIMARY KEY(scope, month))` — last accepted read of each month.
+  - `sync_log(scope, at, source /* 'phone' | 'backup' */, added, modified, deleted, months TEXT /* JSON list */)` — one row per accepted batch: the "git log".
+- Amounts cross the boundary as numbers in currency units (cents in storage, converted exactly: `round(amount * 100)`).
+- Tauri commands (async, errors as strings):
+  - `db_status(scope) -> { movements: number, months: { month, readAt, fingerprint, rows }[], lastSync: string | null }`
+  - `db_movements(scope, from: 'YYYY-MM-DD', to: 'YYYY-MM-DD') -> CanonicalMovement[]` (the T1 shape, ordered by date, id)
+  - `db_apply(scope, batch: { source, upserts: CanonicalMovement[], deletes: string[], months: { month, readAt, fingerprint, rows }[], counts: { added, modified, deleted } }) -> { applied: number }` — ONE transaction: all or nothing; a failure leaves the file unchanged.
+  - `db_log(scope, limit) -> { at, source, added, modified, deleted, months: string[] }[]` newest first.
+- `app/src/infrastructure/local-db.ts`: typed wrappers over `invoke` with the same names in camelCase (`dbStatus`, `dbMovements`, `dbApply`, `dbLog`), plus a `scopeOf(origin, bookId)` helper. Outside Tauri (browser preview, tests) they reject with a clear error.
