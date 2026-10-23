@@ -16,7 +16,7 @@ Objective: phase 1 of the plan agreed on 2026-10-23 — a module to create and e
 
 | ID | Specs | Route | Status | Commit |
 |---|---|---|---|---|
-| T1 | S1, S3 (domain/store), S5, S7 | worker | done | (next commit) |
+| T1 | S1, S3 (domain/store), S5, S7 | worker | done | e5ab440 |
 | T2 | S2, S3 (UI), S4 | worker | pending | |
 | T3 | S6 | inline | pending | |
 | T4 | S1-S7 | inline | pending | build, install, launch |
