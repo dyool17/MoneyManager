@@ -1,0 +1,15 @@
+export default {
+  'Savings goal': 'Meta de ahorro',
+  'Target amount': 'Monto objetivo',
+  'Goal currency (ISO code)': 'Moneda de la meta (código ISO)',
+  'Use an account currency or the configured base currency. Missing conversion makes progress unavailable.': 'Usa la moneda de una cuenta o la moneda base configurada. Sin una conversión válida, el avance no estará disponible.',
+  'Start is the goal deadline. Expense categories are optional for goals.': 'La fecha de inicio es el plazo de la meta. Las categorías de gastos son opcionales para las metas.',
+  'Current amount': 'Monto actual',
+  'Remaining': 'Restante',
+  'Progress unavailable: load account balances and configure currency metadata.': 'Avance no disponible: carga los saldos de las cuentas y configura sus monedas.',
+  'Uses current whole account balances, not future balances. Money is not reserved or moved. Shared accounts measure each goal independently; do not add goals as separate funds.': 'Usa los saldos actuales completos, no saldos futuros. No reserva ni mueve dinero. Las cuentas compartidas miden cada meta por separado; no sumes las metas como fondos independientes.',
+  'Last loaded balances; phone is offline.': 'Últimos saldos cargados; el teléfono está desconectado.',
+  'Future / planned — no projected balances': 'Futuro / planificado — sin saldos proyectados',
+  'Planned': 'Planificado',
+  'In Milestones, enable Savings goal, enter a positive target and currency, and link accounts. Start is the deadline; expense categories are optional. Future goals remain visible with 6M, 12M or All, even without history. Progress needs loaded balances and explicit currency metadata; stored movements alone cannot provide it. Goals stay private and do not change spending baselines.': 'En Hitos, activa Meta de ahorro, ingresa un monto positivo y su moneda y vincula las cuentas. Inicio indica el plazo; las categorías de gastos son opcionales. Las metas futuras siguen visibles con 6M, 12M o Todo, incluso sin historial. El avance requiere saldos cargados y monedas configuradas; los movimientos almacenados no bastan. Las metas son privadas y no cambian las bases de gasto.',
+}

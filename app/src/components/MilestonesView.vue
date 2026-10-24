@@ -9,6 +9,7 @@ import { timeline } from '../domain/milestone-impact'
 import { todayIso } from '../domain/period'
 import { formatDate, formatMoney, monthLabel } from '../domain/format'
 import type { LifeEvent } from '../domain/life-events'
+import SavingsGoalProgress from './milestones/SavingsGoalProgress.vue'
 import MilestoneEditor from './milestones/MilestoneEditor.vue'
 
 const session = useSession()
@@ -55,10 +56,13 @@ function undo(id: string) {
       <template v-if="item.type === 'event'">
         <h3>{{ item.event.label }}</h3>
         <p>{{ item.event.end ? t('{start} to {end}', { start: formatDate(item.date), end: formatDate(item.event.end) }) : t('{start} onwards', { start: formatDate(item.date) }) }} · {{ t(kinds[item.event.kind]) }}</p>
+        <SavingsGoalProgress v-if="item.event.savingsGoal" :goal="item.event.savingsGoal" />
+        <template v-if="item.event.categoryIds.length || item.event.relieved?.length">
         <p>{{ t('Extra cost') }}: {{ formatMoney(item.impact.extraCost) }} · {{ t('Relief') }}: {{ formatMoney(item.impact.relief) }} · {{ t('Estimated net') }}: {{ formatMoney(item.impact.net) }}</p>
         <ul><li v-for="c in item.impact.categories" :key="c.id">
           {{ nameOf(c.id, c.name) }} · {{ c.direction === 'affected' ? t('Affected') : t('Relieved') }} · {{ t('Actual') }}: {{ formatMoney(c.actual) }} · {{ t('Baseline') }}: {{ c.baseline === null ? t('Not enough history') : formatMoney(c.baseline) }}
         </li></ul>
+        </template>
         <button @click="editing = item.event; adding = false">{{ t('Edit') }}</button>
         <button v-if="deleting !== item.id" @click="deleting = item.id">{{ t('Delete') }}</button>
         <div v-else role="group" :aria-label="t('Confirm deletion')"><p>{{ t('Delete this milestone? This cannot be undone.') }}</p><button @click="remove(item.id)">{{ t('Confirm deletion') }}</button><button @click="deleting = null">{{ t('Cancel') }}</button></div>

@@ -45,6 +45,23 @@ describe('life events store', () => {
     expect(events.state.events).toEqual([])
   })
 
+  it('validates and deduplicates goal updates atomically while preserving legacy events', () => {
+    const { events } = setup()
+    events.add({ ...draft, id: 'legacy' })
+    const goal = { target: 100, currency: 'USD', accountIds: ['a', 'a'] }
+    events.add({ ...draft, id: 'goal', categoryIds: [], savingsGoal: goal })
+    expect(events.state.events.find(e => e.id === 'goal')?.savingsGoal?.accountIds).toEqual(['a'])
+    const before = JSON.stringify(events.state)
+    const disk = [...saved]
+    expect(() => events.add({ ...draft, id: 'goal', savingsGoal: { ...goal, target: 0 } })).toThrow('Invalid saved life events.')
+    expect(JSON.stringify(events.state)).toBe(before)
+    expect([...saved]).toEqual(disk)
+    localStorage.setItem = () => { throw new Error('Storage full') }
+    expect(() => events.add({ ...draft, id: 'goal', savingsGoal: goal })).toThrow('Storage full')
+    expect(JSON.stringify(events.state)).toBe(before)
+    expect([...saved]).toEqual(disk)
+  })
+
   it('rejects corrupt saved state with the shared validation error', () => {
     const { metadata } = setup()
     saved.set(`mm.life-events.v1.${metadata.scope}`, '{"events":[{"id":"","start":"bad"}]}')

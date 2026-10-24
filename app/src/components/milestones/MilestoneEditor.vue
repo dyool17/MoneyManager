@@ -6,6 +6,7 @@ import { useBudgetPlans } from '../../stores/budgets'
 import { useLifeEvents } from '../../stores/life-events'
 import { todayIso } from '../../domain/period'
 import { validateLifeEvents, type EventKind, type LifeEvent } from '../../domain/life-events'
+import { useSavingsGoals } from '../../composables/savingsGoals'
 import { readSelection, writeSelection } from './selection'
 
 const props = defineProps<{ event: LifeEvent | null }>()
@@ -15,6 +16,14 @@ const plans = useBudgetPlans()
 const events = useLifeEvents()
 const form = reactive({ label: props.event?.label ?? '', kind: props.event?.kind ?? 'one-off' as EventKind, start: props.event?.start ?? todayIso(), end: props.event?.end ?? '' })
 const selection = reactive(readSelection(props.event ?? { categoryIds: [] }))
+const savings = useSavingsGoals()
+const goalEnabled = ref(!!props.event?.savingsGoal)
+const goal = reactive({ target: String(props.event?.savingsGoal?.target ?? ''), currency: props.event?.savingsGoal?.currency ?? savings.metadata.state.baseCurrency, accountIds: [...(props.event?.savingsGoal?.accountIds ?? [])] })
+const accountChoices = computed(() => {
+  const choices = new Map(savings.accounts.value.map(a => [a.id, a.name]))
+  for (const id of goal.accountIds) if (!choices.has(id)) choices.set(id, id)
+  return [...choices].map(([id, name]) => ({ id, name }))
+})
 const search = ref('')
 const error = ref('')
 const choices = computed(() => {
@@ -34,7 +43,7 @@ watch(choices, (categories) => {
 function save() {
   error.value = ''
   try {
-    const event: LifeEvent = { id: props.event?.id ?? crypto.randomUUID(), ...form, end: form.end || undefined, ...writeSelection(selection) }
+    const event: LifeEvent = { id: props.event?.id ?? crypto.randomUUID(), ...form, end: form.end || undefined, ...writeSelection(selection), savingsGoal: goalEnabled.value ? { target: Number(goal.target), currency: goal.currency.trim().toUpperCase(), accountIds: [...new Set(goal.accountIds)] } : undefined }
     validateLifeEvents({ events: [event] })
     events.add(event)
     emit('close')
@@ -46,6 +55,14 @@ function save() {
   <form class="card editor" @submit.prevent="save">
     <h2>{{ event ? t('Edit milestone') : t('Add milestone') }}</h2>
     <label>{{ t('Note') }}<input v-model="form.label" required /></label>
+    <label><input v-model="goalEnabled" type="checkbox" />{{ t('Savings goal') }}</label>
+    <fieldset v-if="goalEnabled"><legend>{{ t('Savings goal') }}</legend>
+      <label>{{ t('Target amount') }}<input v-model="goal.target" type="number" min="0.01" step="any" required /></label>
+      <label>{{ t('Goal currency (ISO code)') }}<input v-model="goal.currency" pattern="[A-Za-z]{3}" required maxlength="3" /></label>
+      <p>{{ t('Use an account currency or the configured base currency. Missing conversion makes progress unavailable.') }}</p>
+      <p>{{ t('Start is the goal deadline. Expense categories are optional for goals.') }}</p>
+      <label v-for="account in accountChoices" :key="account.id"><input v-model="goal.accountIds" type="checkbox" :value="account.id" />{{ account.name }}</label>
+    </fieldset>
     <label>{{ t('Kind') }}<select v-model="form.kind"><option value="one-off">{{ t('One-off spike') }}</option><option value="new-normal">{{ t('New normal') }}</option><option value="temporary">{{ t('Temporary') }}</option></select></label>
     <p>{{ form.kind === 'one-off' ? t('One-off: a single spike, excluded from the projection baseline.') : form.kind === 'new-normal' ? t('New normal: the category baseline restarts at this date.') : t('Temporary: spending changes while this event lasts.') }}</p>
     <label>{{ t('Start') }}<input v-model="form.start" type="date" required /></label>

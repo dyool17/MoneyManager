@@ -119,6 +119,50 @@ describe('AI context', () => {
     expect(shared).toMatch(/- "Baby arrived" 2026-09-01 to 2026-09-30 temporary: extra cost 300\.00/)
   })
 
+  it.each([false, true])('omits private savings goals from goal-only and mixed context (details=%s)', (includeDetails) => {
+    const goal: LifeEvent = {
+      id: 'private-goal-id', label: 'Private expedition', start: '2031-07-19', end: '2031-08-23',
+      categoryIds: [], kind: 'one-off',
+      savingsGoal: { target: 987654.32, currency: 'JPY', accountIds: ['private-savings-account'] },
+    }
+    const legacy: LifeEvent = {
+      id: 'ordinary-event', label: 'Ordinary move', start: '2026-09-20', end: '2026-09-25',
+      categoryIds: ['sub-food'], kind: 'temporary',
+    }
+    for (const ordinary of [[], [legacy]]) {
+      const expected = buildContext({ ...base, includeDetails, events: ordinary })
+      const actual = buildContext({ ...base, includeDetails, events: [...ordinary, goal] })
+      expect(actual).toBe(expected)
+      for (const secret of [goal.id, goal.label, goal.start, goal.end!, '987654.32', 'JPY', 'private-savings-account']) {
+        expect(actual).not.toContain(secret)
+      }
+      if (ordinary.length) {
+        expect(actual).toContain('## Milestone impact')
+        expect(actual).toContain('2026-09-20 to 2026-09-25 temporary:')
+        expect(actual.includes('Ordinary move')).toBe(includeDetails)
+      } else {
+        expect(actual).not.toContain('## Milestone impact')
+      }
+    }
+  })
+
+  it.each([false, true])('keeps categorized savings goals out of projection context (details=%s)', (includeDetails) => {
+    const spike = { ...mv('2026-09-20', 500), subcategoryId: 'sub-food' }
+    const goal: LifeEvent = {
+      id: 'private-goal', label: 'Private travel', start: '2026-09-19', end: '2026-09-25',
+      categoryIds: ['sub-food'], kind: 'one-off',
+      savingsGoal: { target: 12345.67, currency: 'JPY', accountIds: ['private-account'] },
+    }
+    const ordinary: LifeEvent = {
+      id: 'ordinary', label: 'Ordinary move', start: '2026-09-01', end: '2026-09-30',
+      categoryIds: ['sub-food'], kind: 'temporary',
+    }
+    const input = { ...base, movements: [...base.movements, spike], includeDetails }
+    for (const events of [[], [ordinary]]) {
+      expect(buildContext({ ...input, events: [...events, goal] })).toBe(buildContext({ ...input, events }))
+    }
+  })
+
   it('keeps transaction descriptions out unless allowed', () => {
     expect(buildContext({ ...base, includeDetails: false })).not.toContain('Secret Shop')
     const detailed = buildContext({ ...base, includeDetails: true })

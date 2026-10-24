@@ -24,7 +24,7 @@ export interface ContextInput {
   debts: number | null
   budgets: MonthBudget[]
   includeDetails: boolean
-  /** User-recorded life events; labels go in only when `includeDetails` is on. */
+  /** Spending life events; labels require `includeDetails`. Savings goals are always private. */
   events?: LifeEvent[]
   /** Budgets imported from a phone backup and the mode chosen per category. */
   plan?: BudgetPlan | null
@@ -128,6 +128,9 @@ const oneLine = (s: string) => s.replace(/[\r\n\t]+/g, ' ').replace(/"/g, "'").s
 const pct = (v: number | null) => (v === null ? 'n/a' : `${Math.round(v * 1000) / 10}%`)
 
 export function buildContext(input: ContextInput): string {
+  // Match describeEvents at the boundary, including derived projections and advisor sections.
+  // Sharing transaction details never opts savings goals into AI context.
+  input = { ...input, events: (input.events ?? []).filter(e => !e.savingsGoal) }
   const inRange = input.movements.filter((m) => m.date >= input.first && m.date <= input.last)
   const r = analyze(input.movements, input.first, input.last)
   const months = r.months.map((m) => m.month)

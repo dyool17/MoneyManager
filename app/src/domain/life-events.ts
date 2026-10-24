@@ -1,3 +1,4 @@
+import type { SavingsGoal } from './savings-goal'
 import type { Movement } from './types'
 import type { MonthTotal } from './insights'
 
@@ -21,6 +22,7 @@ export interface LifeEvent {
   relieved?: string[]
   expected?: Record<string, number>
   kind: EventKind
+  savingsGoal?: SavingsGoal
 }
 
 export interface LifeEventState { events: LifeEvent[] }
@@ -69,7 +71,7 @@ const KIND_TEXT: Record<EventKind, string> = {
 
 /** Lines for the assistant's context. Labels appear only when the user shares details. */
 export function describeEvents(events: LifeEvent[], first: string, last: string, includeDetails: boolean, names: Map<string, string> = new Map()): string[] {
-  const active = events.filter((e) => e.start <= last && (!e.end || e.end >= first))
+  const active = events.filter((e) => !e.savingsGoal && e.start <= last && (!e.end || e.end >= first))
   if (!active.length) return []
   const lines = ['## Life events (dates affect how spending should be read)']
   for (const e of [...active].sort((a, b) => a.start.localeCompare(b.start))) {
@@ -88,14 +90,20 @@ export function validateLifeEvents(raw: unknown): LifeEventState {
   if (!raw || typeof raw !== 'object' || !('events' in raw) || !Array.isArray((raw as LifeEventState).events)) fail()
   for (const e of (raw as LifeEventState).events) {
     if (!e || typeof e !== 'object') fail()
-    const { id, label, start, end, categoryIds, relieved, expected, kind } = e as unknown as Record<string, unknown> & Partial<LifeEvent>
+    const { id, label, start, end, categoryIds, relieved, expected, kind, savingsGoal } = e as unknown as Record<string, unknown> & Partial<LifeEvent>
     if (typeof id !== 'string' || !id || typeof label !== 'string' || typeof start !== 'string' || !DATE.test(start)) fail()
     if (end !== undefined && (typeof end !== 'string' || !DATE.test(end))) fail()
     if (typeof end === 'string' && end < start) fail()
     if (!Array.isArray(categoryIds) || !categoryIds.every((c) => typeof c === 'string' && c)) fail()
     if (relieved !== undefined && (!Array.isArray(relieved) || !relieved.every(c => typeof c === 'string' && c))) fail()
     const involved = [...categoryIds, ...(relieved ?? [])]
-    if (!involved.length) fail()
+    if (savingsGoal !== undefined) {
+      if (!savingsGoal || typeof savingsGoal !== 'object' || Array.isArray(savingsGoal)) fail()
+      const { target, currency, accountIds } = savingsGoal
+      if (typeof target !== 'number' || !Number.isFinite(target) || target <= 0 || typeof currency !== 'string' || !/^[A-Z]{3}$/.test(currency)) fail()
+      if (!Array.isArray(accountIds) || !accountIds.length || !accountIds.every(id => typeof id === 'string' && id.trim())) fail()
+    }
+    if (!involved.length && !savingsGoal) fail()
     if (expected !== undefined && (!expected || typeof expected !== 'object' || Array.isArray(expected) || !Object.entries(expected).every(([id, amount]) => involved.includes(id) && typeof amount === 'number' && Number.isFinite(amount) && amount > 0))) fail()
     if (typeof kind !== 'string' || !KINDS.includes(kind as EventKind)) fail()
   }

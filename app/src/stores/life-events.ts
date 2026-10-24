@@ -33,6 +33,8 @@ export const useLifeEvents = defineStore('life-events', () => {
   /** Adds or updates one event; a missing id gets a generated one. Returns the stored event. */
   function add(event: Omit<LifeEvent, 'id'> & { id?: string }): LifeEvent {
     const stored: LifeEvent = { ...event, id: event.id || crypto.randomUUID() }
+    validateLifeEvents({ events: [stored] })
+    if (stored.savingsGoal) stored.savingsGoal = { ...stored.savingsGoal, accountIds: [...new Set(stored.savingsGoal.accountIds)] }
     const others = state.value.events.filter((e) => e.id !== stored.id)
     persist({ events: [...others, stored].sort((a, b) => a.start.localeCompare(b.start)) })
     return stored
