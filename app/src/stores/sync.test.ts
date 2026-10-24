@@ -195,3 +195,80 @@ it('refresh reports a database error instead of failing silently', async () => {
   expect(store.status).toBeNull()
   expect(store.error).toBe('database is locked')
 })
+
+it('S6 probe: a backup with a wholly soft-deleted month removes its stored rows', async () => {
+  const { store } = setup()
+  vi.mocked(dbMovements).mockResolvedValue([canonical(mv('gone', '2026-09-01'))!])
+  vi.mocked(loadBackupHistory).mockResolvedValue([mv('survivor', '2026-10-01')])
+  await store.previewBackup(new File([], 'history.mmbak'))
+  await store.accept('all')
+  expect(vi.mocked(dbApply).mock.calls[0]![1].deletes).toEqual(['gone'])
+})
+it('S5 probe: phone wins cannot leave its opposite pending write queued', async () => {
+  const { session, store } = setup(); const outbox = useOutbox()
+  outbox.queue({ op: 'delete-transactions', ids: ['conflict'] }, 'Delete')
+  vi.mocked(session.getHistory).mockResolvedValue([mv('conflict')])
+  await store.read(['2026-10']); await store.accept(['conflict'])
+  expect(outbox.pending).toHaveLength(0)
+})
+it('refuses a partial multi-id conflict, then discards only after successful apply', async () => {
+  const { session, store } = setup(); const outbox = useOutbox()
+  outbox.queue({ op: 'delete-transactions', ids: ['a', 'b'] }, 'Delete both')
+  vi.mocked(session.getHistory).mockResolvedValue([mv('a'), mv('b')])
+  await store.read(['2026-10'])
+  const before = [...store.pending.entries()]
+  await store.accept(['a'])
+  expect(store.error).toBe('This pending change also affects other movements. Send or discard it in Pending changes first.')
+  expect(dbApply).not.toHaveBeenCalled()
+  expect([...store.pending.entries()]).toEqual(before)
+  expect(outbox.items).toHaveLength(1)
+  vi.mocked(dbApply).mockRejectedValueOnce(new Error('Disk full'))
+  await store.accept(['a', 'b'])
+  expect(outbox.items).toHaveLength(1)
+  expect([...store.pending.entries()]).toEqual(before)
+  await store.accept(['a', 'b'])
+  expect(outbox.items).toEqual([])
+  expect(store.pending.size).toBe(0)
+})
+it('empty backup clears previews without comparing or writing', async () => {
+  const { session, store } = setup()
+  vi.mocked(session.getHistory).mockResolvedValue([mv('previous')])
+  await store.read(['2026-10'])
+  vi.mocked(loadBackupHistory).mockResolvedValue([])
+  await store.previewBackup(new File([], 'empty.mmbak'))
+  expect(store.error).toBe('This backup has no movements; nothing was compared.')
+  expect(store.pending.size).toBe(0)
+  expect(store.previews.size).toBe(0)
+  await store.accept('all')
+  expect(dbApply).not.toHaveBeenCalled()
+})
+it('backup bound includes scheduled rows but never later local months', async () => {
+  const { store } = setup()
+  vi.mocked(dbMovements).mockResolvedValue([
+    canonical(mv('within', '2027-01-01'))!, canonical(mv('later', '2027-03-01'))!,
+  ])
+  vi.mocked(loadBackupHistory).mockResolvedValue([mv('past'), { ...mv('scheduled', '2027-02-01'), isFuture: true }])
+  await store.previewBackup(new File([], 'backup.mmbak'))
+  expect([...store.pending.keys()]).toEqual(['2026-10', '2027-01', '2027-02'])
+  await store.accept('all')
+  expect(vi.mocked(dbApply).mock.calls[0]![1]).toMatchObject({ deletes: ['within'], counts: { added: 2, modified: 0, deleted: 1 } })
+})
+it('S8 probe: a scope switch during read discards that result without applying', async () => {
+  const { session, store } = setup()
+  let finish!: (rows: Movement[]) => void
+  vi.mocked(session.getHistory).mockImplementationOnce(() => new Promise(r => { finish = r }))
+  const task = store.read(['2026-10'])
+  await vi.waitFor(() => expect(session.getHistory).toHaveBeenCalled())
+  session.bookId = 'other'; finish([mv('stale')]); await task
+  expect(store.pending.size).toBe(0); expect(dbApply).not.toHaveBeenCalled()
+})
+it('S1 probe: a scope switch during apply never retargets the batch', async () => {
+  const { session, store } = setup()
+  vi.mocked(session.getHistory).mockResolvedValue([mv('new')]); await store.read(['2026-10'])
+  let finish!: (result: { applied: number }) => void
+  vi.mocked(dbApply).mockImplementationOnce(() => new Promise(r => { finish = r }))
+  const task = store.accept('all'); session.bookId = 'other'
+  finish({ applied: 1 }); await task
+  expect(dbApply).toHaveBeenCalledExactlyOnceWith('http://phone:8080|book', expect.anything())
+  expect(store.pending.size).toBe(0); expect(store.status).toBeNull()
+})

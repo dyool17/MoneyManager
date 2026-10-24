@@ -59,7 +59,7 @@ onMounted(() => { if (history.state === 'idle') loadFromSession() })
         <h1>{{ t('Analysis') }}</h1>
         <p class="muted an-sub">
           <template v-if="history.state === 'ready'">
-            {{ history.source === 'backup' ? t('From a backup file') : session.source === 'demo' ? t('From demo data') : t('Live from your phone') }}
+            {{ history.notice ? t(history.notice) : history.source === 'backup' ? t('From a backup file') : session.source === 'demo' ? t('From demo data') : t('Live from your phone') }}
             · {{ formatDate(first) }} – {{ formatDate(history.span.last) }}
           </template>
           <template v-else-if="history.state === 'loading'">{{ t('Reading your history…') }}</template>

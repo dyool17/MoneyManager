@@ -1,4 +1,5 @@
 export default {
+  'Phone not reachable: showing the history stored on this computer.': 'No se puede conectar con el teléfono: se muestra el historial guardado en este equipo.',
   'Why is my financial health score what it is, and what would raise it most?': '¿Por qué tengo esta puntuación de salud financiera y qué la mejoraría más?',
   'Explain this chart': 'Explica este gráfico',
   '{name} is growing': '{name} está aumentando',

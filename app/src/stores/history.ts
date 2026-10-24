@@ -21,6 +21,7 @@ export const useHistory = defineStore('history', () => {
   const span = ref({ first: '', last: '' })
   const state = ref<'idle' | 'loading' | 'ready' | 'failed'>('idle')
   const error = ref<string | null>(null)
+  const notice = ref<string | null>(null)
   /** Past budgets come from one summary per month; only the phone has them. */
   const budgets = shallowRef<MonthBudget[]>([])
   const budgetState = ref<'idle' | 'loading' | 'ready' | 'failed' | 'unavailable'>('idle')
@@ -38,6 +39,7 @@ export const useHistory = defineStore('history', () => {
     span.value = { first: '', last: '' }
     state.value = 'idle'
     error.value = null
+    notice.value = null
     budgets.value = []
     budgetState.value = 'idle'
   }, { flush: 'sync' })
@@ -46,6 +48,7 @@ export const useHistory = defineStore('history', () => {
     const token = ++latest
     state.value = 'loading'
     error.value = null
+    notice.value = null
     try {
       const m = await task()
       if (token !== latest) return
@@ -81,10 +84,21 @@ export const useHistory = defineStore('history', () => {
     const stored = await dbStatus(scope).then((s) => s.movements > 0, () => false)
     if (!stored) return session.getHistory({ startDate: first, endDate: ahead })
     const current = last.slice(0, 8) + '01'
-    const [rows, recent] = await Promise.all([
-      dbMovements(scope, '0000-01-01', '9999-12-31'),
-      session.getHistory({ startDate: current, endDate: ahead }),
-    ])
+    const token = latest
+    let rows
+    try {
+      rows = await dbMovements(scope, '0000-01-01', '9999-12-31')
+    } catch {
+      return session.getHistory({ startDate: first, endDate: ahead })
+    }
+    let recent: Movement[]
+    try {
+      recent = await session.getHistory({ startDate: current, endDate: ahead })
+    } catch (e) {
+      if (!rows.length) throw e
+      if (token === latest) notice.value = 'Phone not reachable: showing the history stored on this computer.'
+      return rows.map(row => fromCanonical(row, last))
+    }
     const older = rows.filter((r) => r.date < current).map((r) => fromCanonical(r, last))
     const seen = new Set(recent.map((m) => m.id))
     return [...older.filter((m) => !seen.has(m.id)), ...recent]
@@ -127,5 +141,5 @@ export const useHistory = defineStore('history', () => {
     return start
   }
 
-  return { movements, source, span, state, error, budgets, budgetState, fromSession, fromBackup, extend }
+  return { movements, source, span, state, error, notice, budgets, budgetState, fromSession, fromBackup, extend }
 })

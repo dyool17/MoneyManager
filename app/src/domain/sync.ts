@@ -20,7 +20,11 @@ export interface CanonicalMovement {
 
 /** The phone appends the installment counter to the note ("Motorbike ((5/18))"); backups keep it in a separate column. */
 const INSTALLMENT = /\s*\(\(\d+\/\d+\)\)$/
-const note = (s: string | undefined) => s?.trim().replace(INSTALLMENT, '').trim() || undefined
+const text = (s: string | undefined) => {
+  const trimmed = s?.trim()
+  return !trimmed || trimmed === 'null' ? undefined : trimmed
+}
+const note = (s: string | undefined) => text(text(s)?.replace(INSTALLMENT, ''))
 
 export function canonical(m: Movement): CanonicalMovement | null {
   if (m.type === 'transfer-in' && m.rawCode === '4') return null
@@ -31,7 +35,7 @@ export function canonical(m: Movement): CanonicalMovement | null {
     amount: Math.round((Math.abs(m.amount) + Number.EPSILON) * 100) / 100,
     assetId: m.assetId, toAssetId: m.toAssetId,
     categoryId: m.categoryId, subcategoryId,
-    content: note(m.content), detail: m.detail?.trim() || undefined,
+    content: note(m.content), detail: text(m.detail),
     accountName: m.accountName, categoryName: m.categoryName, subcategoryName: m.subcategoryName,
   }
 }

@@ -1,4 +1,7 @@
 export default {
+  'This pending change also affects other movements. Send or discard it in Pending changes first.': 'Este cambio pendiente también afecta a otros movimientos. Envíalo o descártalo primero en Cambios pendientes.',
+  'This backup has no movements; nothing was compared.': 'Esta copia de seguridad no contiene movimientos; no se ha comparado nada.',
+  'Movements added on the phone after this backup was exported appear as deletions; check the phone first.': 'Los movimientos añadidos en el teléfono después de exportar esta copia de seguridad aparecen como eliminaciones; revisa primero el teléfono.',
   'Sync': 'Sincronización',
   'Incoming and outgoing changes with the phone': 'Cambios entrantes y salientes con el teléfono',
   'Sync screen (incoming and outgoing changes with the phone)': 'Pantalla Sincronización (cambios entrantes y salientes con el teléfono)',

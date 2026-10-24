@@ -131,7 +131,16 @@ export const useSync = defineStore('sync', () => {
       const local = await dbMovements(target, '0000-01-01', '9999-12-31')
       if (token !== generation) return
       pending.value = new Map(); previews.value = new Map()
-      for (const month of [...new Set(remote.map(row => row.date.slice(0, 7)))].sort()) {
+      if (!remote.length) {
+        error.value = 'This backup has no movements; nothing was compared.'
+        return
+      }
+      const lastMonth = remote.reduce((last, row) => row.date.slice(0, 7) > last ? row.date.slice(0, 7) : last, '')
+      const months = new Set([
+        ...remote.map(row => row.date.slice(0, 7)),
+        ...local.map(row => row.date.slice(0, 7)).filter(month => month <= lastMonth),
+      ])
+      for (const month of [...months].sort()) {
         compare(month, remote.filter(row => row.date.startsWith(month)), local, 'backup')
       }
     } catch (e) { if (token === generation) error.value = message(e) }
@@ -147,6 +156,18 @@ export const useSync = defineStore('sync', () => {
     const blocked = new Set(conflicts.value.map(c => c.change.id))
     const selected = changes.value.filter(c => (!month || c.month === month) &&
       (ids === 'all' ? !blocked.has(c.id) : ids.includes(c.id)))
+    const acceptedConflicts = new Set(selected.filter(c => blocked.has(c.id)).map(c => c.id))
+    const opposing = relevantOutbox.value.filter(item =>
+      conflicts.value.some(c => acceptedConflicts.has(c.change.id) && c.pending.id === item.id))
+    if (opposing.some(item => {
+      const op = item.op
+      const targets = op.op === 'delete-transactions' ? op.ids
+        : op.op === 'update-transaction' || op.op === 'update-transfer' ? [op.id] : []
+      return targets.some(id => !acceptedConflicts.has(id))
+    })) {
+      error.value = 'This pending change also affects other movements. Send or discard it in Pending changes first.'
+      return
+    }
     const selectedSet = new Set(selected)
     const months = available.filter(p => p.complete && (pending.value.get(p.month) ?? []).every(c => selectedSet.has(c)))
       .map(({ month, readAt, fingerprint, rows }) => ({ month, readAt, fingerprint, rows }))
@@ -159,6 +180,7 @@ export const useSync = defineStore('sync', () => {
         deletes: selected.filter(c => c.kind === 'deleted').map(c => c.id), months,
         counts: { added: selected.filter(c => c.kind === 'new').length, modified: selected.filter(c => c.kind === 'modified').length, deleted: selected.filter(c => c.kind === 'deleted').length },
       })
+      for (const item of opposing) outbox.discard(item.id)
       if (token !== generation) return
       const next = new Map(pending.value); const snapshots = new Map(previews.value)
       for (const [m, entries] of next) {

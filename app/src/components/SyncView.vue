@@ -52,6 +52,7 @@ const to = ref(new Date().toISOString().slice(0, 7))
     <section class="card">
       <h2>{{ t('↓ Incoming') }}</h2>
       <p>{{ t('Nothing is written to the database until you accept. Sync never writes to the phone.') }}</p>
+      <p v-if="[...sync.previews.values()].some(preview => preview.source === 'backup')" role="status">{{ t('Movements added on the phone after this backup was exported appear as deletions; check the phone first.') }}</p>
       <button :disabled="sync.reading || sync.applying || !sync.pending.size" @click="sync.accept('all')">{{ t('Accept all (excluding conflicts)') }}</button>
       <p v-if="!sync.summary.length">{{ t('No incoming changes to review.') }}</p>
       <details v-for="month in sync.summary" :key="month.month">

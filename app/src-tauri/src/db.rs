@@ -545,3 +545,49 @@ mod tests {
         assert!(log(&c, "absent", 10).unwrap().is_empty());
     }
 }
+
+#[cfg(test)]
+mod verifier_probes {
+    use super::*;
+    fn batch() -> Batch {
+        serde_json::from_value(serde_json::json!({
+          "source":"phone", "upserts":[{"id":"x","date":"2026-10-01","type":"expense","amount":12.34,"assetId":"cash","accountName":"Cash"}],
+          "deletes":[], "months":[], "counts":{"added":1,"modified":0,"deleted":0}
+        })).unwrap()
+    }
+    #[test]
+    fn rejected_batches_preserve_main_and_wal_bytes() {
+        let dir = std::env::temp_dir().join(format!(
+            "verifier-db-{}-{}",
+            std::process::id(),
+            chrono::Utc::now().timestamp_nanos_opt().unwrap(),
+        ));
+        std::fs::create_dir(&dir).unwrap();
+        let mut c = open(&dir).unwrap();
+        apply(&mut c, "a", batch()).unwrap();
+        let snapshot = || (std::fs::read(dir.join("money.db")).unwrap(), std::fs::read(dir.join("money.db-wal")).unwrap());
+        let before = snapshot();
+        for bad in ["source", "date", "amount", "month"] {
+            let mut b = batch(); b.deletes.push("x".into()); b.upserts[0].id = "new".into();
+            match bad {
+              "source" => b.source = "invalid".into(),
+              "date" => b.upserts[0].date = "2026-02-30".into(),
+              "amount" => b.upserts[0].amount = -1.0,
+              _ => b.months.push(Month {month:"2026-13".into(), read_at:"today".into(), fingerprint:"x".into(), rows:1}),
+            }
+            assert!(apply(&mut c,"a",b).is_err(), "{bad}");
+            assert_eq!(snapshot(),before,"{bad}");
+            assert_eq!(status(&c,"a").unwrap().movements,1);
+            assert_eq!(status(&c,"other").unwrap().movements,0);
+        }
+        drop(c);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+    #[test]
+    fn newer_schema_is_not_downgraded() {
+        let mut c = Connection::open_in_memory().unwrap();
+        c.pragma_update(None,"user_version",2).unwrap();
+        assert_eq!(migrate(&mut c).unwrap_err(),"Unsupported database schema version: 2");
+        assert_eq!(c.pragma_query_value(None,"user_version",|r|r.get::<_,i64>(0)).unwrap(),2);
+    }
+}

@@ -102,6 +102,7 @@ watch(() => history.state, (s) => { if (s === 'idle') history.fromSession(12) },
     <p v-else-if="history.state === 'failed'" class="card warn">{{ t('Could not read your history: {error}', { error: t(history.error ?? '') }) }}</p>
 
     <template v-else>
+      <p v-if="history.notice" class="card warn" role="status">{{ t(history.notice) }}</p>
       <section class="card brief ai-surface" :aria-label="t('Your brief')">
         <div class="brief-text">
           <div class="brief-label"><Icon name="sparkle" :size="14" />{{ brief.state === 'ready' ? t("Your brief · written by the assistant from today's reports") : t('Your month in one line') }}</div>
