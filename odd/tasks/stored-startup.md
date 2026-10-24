@@ -14,7 +14,7 @@ Objective: when the app starts and a local database holds history for the last s
 | ID | Specs | Route | Status | Commit |
 |---|---|---|---|---|
 | T1 | S1-S4 | worker | done | e56e405 |
-| T2 | S1-S4 | inline | pending | build, install, launch |
+| T2 | S1-S4 | inline | done | 266/266, vue-tsc, vite build; installed and launched |
 
 ## Log
 
