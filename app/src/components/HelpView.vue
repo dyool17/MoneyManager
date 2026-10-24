@@ -48,7 +48,7 @@ const SPENDING_TOOLS = [
         <li>{{ t('Open') }} <button class="link" @click="nav.go('settings', 'phone')">{{ t('Settings → Phone and backups') }}</button> {{ t('and type the address the phone shows, for example') }} <code>http://192.168.1.161:8080</code>.</li>
         <li>{{ t('Keep the phone unlocked with Money Manager on screen. PC Manager stops when the phone locks or you switch apps.') }}</li>
       </ol>
-      <p class="muted">{{ t('Without a phone the app opens with demo data, so you can look around safely.') }}</p>
+      <p class="muted">{{ t('The app opens with stored movements from the last synced phone and book when available; otherwise it opens with demo data. Stored data is read-only. Connect the phone for balances or to make changes.') }}</p>
     </div>
 
     <h2 class="section">{{ t('Screens') }}</h2>

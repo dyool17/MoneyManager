@@ -1,4 +1,5 @@
 export default {
+  'Balances, net worth, accounts and cards need the phone. Stored movements remain available in reports.': 'Los saldos, el patrimonio, las cuentas y las tarjetas requieren el teléfono. Los movimientos guardados siguen disponibles en los informes.',
   'Money': 'Dinero',
   'Accounts': 'Cuentas',
   'Account': 'Cuenta',

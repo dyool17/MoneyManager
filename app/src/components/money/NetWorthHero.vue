@@ -16,7 +16,7 @@ const metadata = useAccountMetadata()
 const RANGES: HistoryRange[] = ['6M', '12M', 'All']
 const range = ref<HistoryRange>('12M')
 
-const current = computed(() => metadata.totals.netWorth !== null ? metadata.totals : session.source === 'demo' ? session.dashboard : null)
+const current = computed(() => session.source === 'stored' ? null : metadata.totals.netWorth !== null ? metadata.totals : session.source === 'demo' ? session.dashboard : null)
 const history = computed(() => sliceHistory(session.dashboard?.history ?? [], range.value))
 const points = computed(() => history.value.map((p) => ({ label: /^\d{4}-\d{2}/.test(p.month) ? monthLabel(p.month) : p.month, value: p.total })))
 const change = computed(() => history.value.length > 1 ? history.value[history.value.length - 1].total - history.value[0].total : null)
@@ -25,7 +25,10 @@ const netShown = useCountUp(computed(() => current.value?.netWorth))
 
 <template>
   <section class="card hero" :aria-label="t('Net worth')">
-    <div v-if="!current" class="needed">
+    <div v-if="session.source === 'stored'" class="needed">
+      <p>{{ t('Balances, net worth, accounts and cards need the phone. Stored movements remain available in reports.') }}</p>
+    </div>
+    <div v-else-if="!current" class="needed">
       <h2>{{ t('Account metadata needed') }}</h2>
       <p>{{ t('Configure {n} account(s) or import a .mmbak backup before calculating corrected totals.', { n: metadata.totals.missing.length.toLocaleString(intlLocale()) }) }}</p>
       <button class="primary" @click="$emit('configure')">{{ t('Configure accounts') }}</button>
@@ -45,7 +48,7 @@ const netShown = useCountUp(computed(() => current.value?.netWorth))
       <AiButton :question="t('Why did my net worth change over the last months?')" :about="t('Net worth')">{{ t('Why did it change?') }}</AiButton>
     </div>
 
-    <div class="chart">
+    <div v-if="session.source !== 'stored'" class="chart">
       <div class="card-head">
         <h2>{{ t('History') }}</h2>
         <div class="seg" role="group" :aria-label="t('History range')">

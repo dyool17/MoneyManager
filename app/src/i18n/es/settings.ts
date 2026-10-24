@@ -1,4 +1,5 @@
 export default {
+  'You are viewing stored data. Connect your phone to refresh it or use demo data below.': 'Estás viendo datos guardados. Conecta tu teléfono para actualizarlos o usa los datos de demostración a continuación.',
   'Phone and backups': 'Teléfono y copias de seguridad',
   'Assistant': 'Asistente',
   'Appearance': 'Apariencia',

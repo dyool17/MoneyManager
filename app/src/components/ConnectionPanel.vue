@@ -18,6 +18,7 @@ async function connect(source: 'demo' | 'phone') {
 <template>
   <section class="panel">
     <h1>{{ t('Connect your phone') }}</h1>
+    <p v-if="session.source === 'stored'">{{ t('You are viewing stored data. Connect your phone to refresh it or use demo data below.') }}</p>
     <ol>
       <li>{{ t('Open Money Manager on your phone.') }}</li>
       <li>{{ t('Go to More, then PC Manager, and tap Start.') }}</li>

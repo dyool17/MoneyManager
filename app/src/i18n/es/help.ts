@@ -26,7 +26,7 @@ export default {
   'Settings → Phone and backups': 'Configuración → Teléfono y copias de seguridad',
   'and type the address the phone shows, for example': 'e introduce la dirección que muestra el teléfono, por ejemplo',
   'Keep the phone unlocked with Money Manager on screen. PC Manager stops when the phone locks or you switch apps.': 'Mantén el teléfono desbloqueado con Money Manager en pantalla. PC Manager se detiene si el teléfono se bloquea o cambias de aplicación.',
-  'Without a phone the app opens with demo data, so you can look around safely.': 'Sin teléfono, la aplicación se abre con datos de demostración para que puedas explorarla sin riesgos.',
+  'The app opens with stored movements from the last synced phone and book when available; otherwise it opens with demo data. Stored data is read-only. Connect the phone for balances or to make changes.': 'La aplicación se abre con los movimientos guardados del último teléfono y libro sincronizados, si están disponibles; de lo contrario, usa datos de demostración. Los datos guardados son de solo lectura. Conecta el teléfono para ver saldos o realizar cambios.',
   'Screens': 'Pantallas',
   'Analysis reports': 'Informes de análisis',
   'Every figure is computed with fixed rules from your own data. The same data always gives the same result.': 'Cada cifra se calcula con reglas fijas a partir de tus datos. Los mismos datos siempre producen el mismo resultado.',

@@ -12,7 +12,8 @@ export const useAccountMetadata = defineStore('account-metadata', () => {
   const storageError = ref('')
   const scope = computed(() => {
     if (session.source === 'demo') return 'demo'
-    try { return new URL(session.address).origin } catch { return session.address.trim() }
+    const address = session.source === 'stored' ? session.storedScope.slice(0, session.storedScope.lastIndexOf('|')) : session.address
+    try { return new URL(address).origin } catch { return address.trim() }
   })
   const key = computed(() => `mm.account-metadata.v1.${scope.value}`)
   watch(key, () => {

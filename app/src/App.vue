@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { t } from './i18n'
+import { t, intlLocale } from './i18n'
+import { startupSource } from './infrastructure/stored-client'
 import { useSession } from './stores/session'
 import SyncView from './components/SyncView.vue'
 import { useSync } from './stores/sync'
@@ -27,10 +28,13 @@ const sync = useSync()
 const MAIN = SCREENS.filter((s) => s.id !== 'settings' && s.id !== 'help')
 const ICON: Record<Screen, IconName> = { sync: 'sync', today: 'today', money: 'money', spending: 'spending', analysis: 'analysis', milestones: 'milestones', settings: 'settings', help: 'help' }
 
-onMounted(() => {
+onMounted(async () => {
   applyTheme()
-  session.connect('demo')
   chat.refreshStatus()
+  const scope = sync.scope
+  const source = await startupSource(scope)
+  // A connection chosen in Settings while storage was opening takes precedence.
+  if (session.status === 'idle') await session.connect(source, scope ?? '')
 })
 </script>
 
@@ -71,8 +75,9 @@ onMounted(() => {
       <button type="button" class="status" @click="nav.go('settings', 'phone')">
         <span :class="['dot', session.source === 'phone' ? 'live' : 'demo']" />
         <span>
-          {{ session.source === 'phone' ? t('Phone connected') : t('Demo data') }}
-          <small>{{ session.source === 'phone' ? (session.backupState === 'done' ? t('Backup saved') : session.address) : t('Connect your phone') }}</small>
+          {{ session.source === 'phone' ? t('Phone connected') : session.source === 'stored' ? t('Stored data') : t('Demo data') }}
+          <small v-if="session.source === 'stored'">{{ session.lastSync ? t('Last sync: {time}', { time: new Date(session.lastSync).toLocaleString(intlLocale()) }) : t('Last sync unknown') }}</small>
+          <small v-else>{{ session.source === 'phone' ? (session.backupState === 'done' ? t('Backup saved') : session.address) : t('Connect your phone') }}</small>
         </span>
       </button>
     </nav>

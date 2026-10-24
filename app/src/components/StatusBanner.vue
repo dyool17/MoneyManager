@@ -7,7 +7,7 @@ const outbox = useOutbox()
 </script>
 
 <template>
-  <div v-if="session.status === 'loading'" class="banner quiet" role="status">{{ session.source === 'demo' ? t('Loading from demo data…') : t('Loading from your phone…') }}</div>
+  <div v-if="session.status === 'loading'" class="banner quiet" role="status">{{ session.source === 'demo' ? t('Loading from demo data…') : session.source === 'stored' ? t('Loading stored data…') : t('Loading from your phone…') }}</div>
   <div v-else-if="session.error" class="banner" role="alert">
     <strong>{{ session.status === 'invalid-response' ? t('The phone sent data this app cannot read.') : t('Could not load data.') }}</strong>
     <span>{{ t(session.error) }}</span>

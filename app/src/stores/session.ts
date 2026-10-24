@@ -21,8 +21,10 @@ import {
   type WriteOp,
 } from '../infrastructure/client'
 
+import { StoredClient } from '../infrastructure/stored-client'
+
 export type Status = 'idle' | 'loading' | 'ready' | 'offline' | 'invalid-response'
-export type Source = 'demo' | 'phone'
+export type Source = 'demo' | 'phone' | 'stored'
 
 const ADDRESS_KEY = 'mm.address'
 
@@ -37,6 +39,8 @@ function readSavedAddress(): string {
 export const useSession = defineStore('session', () => {
   const source = ref<Source>('demo')
   const address = ref(readSavedAddress())
+  const storedScope = ref('')
+  const lastSync = ref<string | null>(null)
   const status = ref<Status>('idle')
   const error = ref<string | null>(null)
   const init = shallowRef<InitData | null>(null)
@@ -111,8 +115,10 @@ export const useSession = defineStore('session', () => {
     const candidate: MoneyManagerClient =
       next === 'demo'
         ? new PcManagerClient(new FixtureTransport())
+        : next === 'stored' ? new StoredClient(nextAddress)
         : new PcManagerClient(new TauriTransport(nextAddress.trim()))
     await run(async () => {
+      const storedStatus = candidate instanceof StoredClient ? await candidate.getStatus() : null
       const data = await candidate.getInitData()
       const query = { ...data.defaultPeriod, mbid: data.currentBook.id }
       const s = await candidate.getSummary(query)
@@ -121,6 +127,8 @@ export const useSession = defineStore('session', () => {
       // Commit only after every read succeeded, so a failure keeps the previous state.
       return () => {
         client = candidate
+        storedScope.value = next === 'stored' ? nextAddress : ''
+        lastSync.value = storedStatus?.lastSync ?? null
         source.value = next
         init.value = data
         bookId.value = data.currentBook.id
@@ -191,6 +199,8 @@ export const useSession = defineStore('session', () => {
 
   return {
     source,
+    storedScope,
+    lastSync,
     address,
     status,
     error,

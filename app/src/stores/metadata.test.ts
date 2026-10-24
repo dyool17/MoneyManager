@@ -17,6 +17,16 @@ function setup() {
 }
 
 describe('account metadata store', () => {
+  it('shares phone metadata with its stored scope, not the saved address or demo', () => {
+    const { session, metadata } = setup(); metadata.acceptImport(snapshot)
+    session.storedScope = 'http://192.168.1.2:8080|book'
+    session.source = 'stored'; session.address = 'http://other:8080'
+    expect(metadata.scope).toBe('http://192.168.1.2:8080')
+    expect(metadata.settingsFor('a')).toEqual(snapshot.accounts.a)
+    session.source = 'demo'
+    expect(metadata.scope).toBe('demo'); expect(metadata.settingsFor('a')).toBeUndefined()
+  })
+
   it('persists normalized metadata per phone and keeps overrides on re-import', () => {
     const { session, metadata } = setup()
     metadata.acceptImport(snapshot)

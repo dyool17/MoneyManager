@@ -1,6 +1,10 @@
 /** Spanish for the language switch and app shell. */
 export default {
   Language: 'Idioma',
+  'Stored data': 'Datos guardados',
+  'Last sync: {time}': 'Última sincronización: {time}',
+  'Last sync unknown': 'Última sincronización desconocida',
+  'Loading stored data…': 'Cargando datos guardados…',
   'Dates must use YYYY-MM-DD': 'Las fechas deben usar el formato YYYY-MM-DD',
   'startDate must be <= endDate': 'La fecha inicial debe ser anterior o igual a la fecha final',
   'invalid query': 'consulta no válida',

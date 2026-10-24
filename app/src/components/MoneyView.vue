@@ -45,9 +45,11 @@ function remove() {
     </p>
     <p v-if="session.source === 'phone'" class="muted">{{ t('Current totals use live balances and account metadata.') }}</p>
 
-    <NetWorthHero @configure="nav.go('settings', 'accounts')" />
+    <p v-if="session.source === 'stored'" role="status" class="muted">{{ t('Balances, net worth, accounts and cards need the phone. Stored movements remain available in reports.') }}</p>
 
-    <div class="grid">
+    <NetWorthHero v-else @configure="nav.go('settings', 'accounts')" />
+
+    <div v-if="session.source !== 'stored'" class="grid">
       <AccountsTable :rows="rows" :selected="selected?.id ?? null" :can-add="session.source === 'phone'"
         @select="selectedId = $event" @add-account="draft = { kind: 'asset' }" @add-card="draft = { kind: 'card' }" />
       <AccountDetail v-if="selected" :account="selected" @edit="edit" @remove="remove" />
