@@ -4,21 +4,23 @@ import { t, intlLocale } from '../../i18n'
 import { useSession } from '../../stores/session'
 import { useAccountMetadata } from '../../stores/metadata'
 import { useCountUp } from '../../composables/countUp'
-import { formatMoney, monthLabel } from '../../domain/format'
+import { formatMoney } from '../../domain/format'
+import { useLifeEvents } from '../../stores/life-events'
+import { todayIso } from '../../domain/period'
 import { sliceHistory, type HistoryRange } from '../../domain/money'
-import LineChart from '../LineChart.vue'
+import NetWorthTimeline from './NetWorthTimeline.vue'
 import AiButton from '../AiButton.vue'
 
 defineEmits<{ configure: [] }>()
 const session = useSession()
 const metadata = useAccountMetadata()
+const events = useLifeEvents()
 
 const RANGES: HistoryRange[] = ['6M', '12M', 'All']
 const range = ref<HistoryRange>('12M')
 
 const current = computed(() => session.source === 'stored' ? null : metadata.totals.netWorth !== null ? metadata.totals : session.source === 'demo' ? session.dashboard : null)
 const history = computed(() => sliceHistory(session.dashboard?.history ?? [], range.value))
-const points = computed(() => history.value.map((p) => ({ label: /^\d{4}-\d{2}/.test(p.month) ? monthLabel(p.month) : p.month, value: p.total })))
 const change = computed(() => history.value.length > 1 ? history.value[history.value.length - 1].total - history.value[0].total : null)
 const netShown = useCountUp(computed(() => current.value?.netWorth))
 </script>
@@ -48,7 +50,7 @@ const netShown = useCountUp(computed(() => current.value?.netWorth))
       <AiButton :question="t('Why did my net worth change over the last months?')" :about="t('Net worth')">{{ t('Why did it change?') }}</AiButton>
     </div>
 
-    <div v-if="session.source !== 'stored'" class="chart">
+    <div class="chart">
       <div class="card-head">
         <h2>{{ t('History') }}</h2>
         <div class="seg" role="group" :aria-label="t('History range')">
@@ -56,8 +58,9 @@ const netShown = useCountUp(computed(() => current.value?.netWorth))
         </div>
       </div>
       <p v-if="session.source === 'phone'" class="muted note">{{ t('Historical figures are PC Manager data and are not recalculated with current account settings.') }}</p>
-      <LineChart v-if="points.length" :points="points" :label="t('Net worth by month')" />
+      <NetWorthTimeline v-if="history.length || events.state.events.some(e => e.savingsGoal && e.start > todayIso())" :history="history" :events="events.state.events" :movements="session.movements" :today="todayIso()" />
       <p v-else class="muted">{{ t('No history yet.') }}</p>
+      <p v-if="events.storageError" role="alert">{{ t(events.storageError) }}</p>
     </div>
   </section>
 </template>

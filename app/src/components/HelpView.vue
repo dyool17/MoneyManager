@@ -38,6 +38,9 @@ const SPENDING_TOOLS = [
     <header>
       <h1>{{ t('Help') }}</h1>
       <p class="lead">{{ t('Money Manager Desktop shows and analyses the data of the Money Manager phone app on your computer. Everything stays on this computer.') }}</p>
+      <p>{{ t('In Money, select a milestone below the net worth chart to highlight its dates and compare observed monthly balances with estimated spending impact. Use 6M, 12M or All to change the shared timeline.') }}</p>
+      <p>{{ t('In Milestones, enable Savings goal, enter a positive target and currency, and link accounts. Start is the deadline; expense categories are optional. Future goals remain visible with 6M, 12M or All, even without history. Progress needs loaded balances and explicit currency metadata; stored movements alone cannot provide it. Goals stay private and do not change spending baselines.') }}</p>
+      <p>{{ t('Uses current whole account balances, not future balances. Money is not reserved or moved. Shared accounts measure each goal independently; do not add goals as separate funds.') }}</p>
     </header>
 
     <div class="card steps">
