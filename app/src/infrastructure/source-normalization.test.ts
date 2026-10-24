@@ -22,3 +22,8 @@ it.each(['Motorbike', 'null'])('S6 source-to-source note %s', (note) => {
     db.close()
   }
 })
+
+it.each(['null', ' null ', '\tnull\n'])('normalizes a literal null note and detail: %j', (value) => {
+  const base = { id: 'x', date: '2026-10-01', type: 'expense' as const, rawCode: '1', amount: 12.34, assetId: 'cash', accountName: 'Cash', isFuture: false }
+  expect(canonical({ ...base, content: value, detail: value })).toEqual(canonical(base))
+})
