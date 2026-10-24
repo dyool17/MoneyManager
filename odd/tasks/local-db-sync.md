@@ -23,7 +23,7 @@ Objective: phase 2 of the plan agreed on 2026-10-23 — keep the whole history i
 | T4 | S3, S4, S5 | worker | done | 91129a4 |
 | T5 | S7 | inline | done | 2c180ae |
 | T6a | S1, S5, S6, S7 | worker | done (e2a67f8) | fixes for the independent verification findings (contract below) |
-| T6 | S1-S8 | inline + verify | done | live read-only probe, two verifications, 258/258 + cargo 45, installed and launched | live read-only pull against the phone, independent verification, build, install, launch |
+| T6 | S1-S8 | inline + verify | done | live read-only probe, two verifications, 258/258 + cargo 45, installed and launched |
 
 ## Log
 
