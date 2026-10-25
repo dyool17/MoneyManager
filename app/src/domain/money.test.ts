@@ -28,10 +28,10 @@ describe('buildAccountRows', () => {
   it('computes shares within assets and within debts', () => {
     expect(rows.map((r) => Math.round(r.share))).toEqual([67, 33, 83, 17])
   })
-  it('always counts what a card owes as debt, whatever sign the phone reports', () => {
+  it('preserves a positive card balance without changing its type', () => {
     const positive: CardGroup[] = [{ ...cards[0]!, items: cards[0]!.items.map((c) => ({ ...c, outstanding: 1400 })) }]
     const row = buildAccountRows(assets, positive).find((r) => r.id === 'k1')!
-    expect(row.balance).toBe(-1400)
+    expect(row.balance).toBe(1400)
     expect(row.kind).toBe('card')
   })
 

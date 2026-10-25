@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, shallowRef, ref, watch } from 'vue'
+import { computed } from 'vue'
+import { useAccountTrend } from '../../composables/accountTrend'
 import { t, intlLocale } from '../../i18n'
 import { useSession } from '../../stores/session'
 import { useAccountMetadata } from '../../stores/metadata'
 import { useNav } from '../../stores/nav'
 import { formatMoney, monthLabel } from '../../domain/format'
 import { accountFlow, type AccountRow } from '../../domain/money'
-import type { MonthPoint } from '../../domain/types'
 import LineChart from '../LineChart.vue'
 import AiButton from '../AiButton.vue'
 
@@ -16,24 +16,11 @@ const session = useSession()
 const metadata = useAccountMetadata()
 const nav = useNav()
 
-const trend = shallowRef<MonthPoint[]>([])
-const trendError = ref<string | null>(null)
-const trendLoading = ref(false)
-let request = 0
-watch(() => props.account.id, async (id) => {
-  const ticket = ++request
-  trendLoading.value = true
-  trendError.value = null
-  trend.value = []
-  try {
-    const points = await session.getAssetTrend(id)
-    if (ticket === request) trend.value = points
-  } catch (e) {
-    if (ticket === request) trendError.value = e instanceof Error ? e.message : String(e)
-  } finally {
-    if (ticket === request) trendLoading.value = false
-  }
-}, { immediate: true })
+const { points: trend, error: trendError, loading: trendLoading, retry } = useAccountTrend(
+  () => props.account.id,
+  () => JSON.stringify([session.source, session.address, session.storedScope, session.bookId, session.loadedAt]),
+  (id) => session.getAssetTrend(id),
+)
 
 const flow = computed(() => accountFlow(session.movements, props.account.id))
 const counted = computed(() => {
@@ -53,15 +40,15 @@ const linkedName = computed(() => session.assets.flatMap((g) => g.items).find((i
     <template v-if="isCard">
       <p v-if="linkedName" class="muted">{{ t('Paid from {name}', { name: linkedName }) }}</p>
       <dl>
-        <div><dt class="label">{{ t('To pay') }}</dt><dd class="num expense">{{ formatMoney(account.balance) }}</dd></div>
+        <div><dt class="label">{{ account.balance < 0 ? t('To pay') : account.balance > 0 ? t('Credit balance') : t('Balance') }}</dt><dd :class="['num', account.balance < 0 ? 'expense' : account.balance > 0 ? 'income' : '']">{{ formatMoney(account.balance) }}</dd></div>
         <div v-if="account.closingDay"><dt class="label">{{ t('Statement closes') }}</dt><dd>{{ t('Day {n}', { n: Number(account.closingDay).toLocaleString(intlLocale()) }) }}</dd></div>
         <div v-if="account.paymentDay"><dt class="label">{{ t('Payment due') }}</dt><dd>{{ t('Day {n}', { n: Number(account.paymentDay).toLocaleString(intlLocale()) }) }}</dd></div>
       </dl>
     </template>
 
-    <div class="chart">
+    <div class="chart" :aria-busy="trendLoading" aria-live="polite">
       <div class="label">{{ t('Balance by month') }}</div>
-      <p v-if="trendError" class="error">{{ t('Could not load the trend: {error}', { error: t(trendError) }) }}</p>
+      <div v-if="trendError"><p class="error">{{ t('Could not load the trend: {error}', { error: t(trendError) }) }}</p><button type="button" @click="retry">{{ t('Retry trend') }}</button></div>
       <p v-else-if="trendLoading && !trend.length" class="muted">{{ t('Loading…') }}</p>
       <LineChart v-else-if="trend.length" :points="trend.map((p) => ({ label: /^\d{4}-\d{2}/.test(p.month) ? monthLabel(p.month) : p.month, value: p.value }))" :color="account.color" :label="t('{name} balance by month', { name: account.name })" />
       <p v-else class="muted">{{ t('No history for this account.') }}</p>

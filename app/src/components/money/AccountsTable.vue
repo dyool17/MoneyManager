@@ -37,7 +37,7 @@ const sort = useSort(visible, {
       </div>
     </div>
     <p v-if="!visible.length" class="muted">{{ t('No accounts found.') }}</p>
-    <div v-else class="scroll">
+    <div v-else class="scroll" role="region" :aria-label="t('Accounts')" tabindex="0">
       <table>
         <thead><tr>
           <SortTh :sort="sort" by="name">{{ t('Account') }}</SortTh>
@@ -67,7 +67,10 @@ const sort = useSort(visible, {
 
 <style scoped>
 .acts { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: flex-end; }
-.scroll { overflow-x: auto; }
+.scroll { overflow: auto; max-height: min(24rem, 55vh); overscroll-behavior: contain; }
+.scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+section { min-width: 0; }
+thead { position: sticky; top: 0; z-index: 1; background: var(--paper); }
 table { width: 100%; border-collapse: collapse; min-width: 30rem; }
 th, td { padding: 0.55rem 0.5rem; border-bottom: 1px solid var(--rule); text-align: left; font-weight: 400; }
 tbody tr:last-child th, tbody tr:last-child td { border-bottom: none; }

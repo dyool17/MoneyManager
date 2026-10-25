@@ -8,6 +8,7 @@ import { buildAccountRows } from '../domain/money'
 import NetWorthHero from './money/NetWorthHero.vue'
 import AccountsTable from './money/AccountsTable.vue'
 import AccountDetail from './money/AccountDetail.vue'
+import MoneyDistribution from './money/MoneyDistribution.vue'
 import ChangeDialog, { type Draft } from './ChangeDialog.vue'
 
 const session = useSession()
@@ -48,6 +49,7 @@ function remove() {
     <p v-if="session.source === 'stored'" role="status" class="muted">{{ t('Balances, net worth, accounts and cards need the phone. Stored movements remain available in reports.') }}</p>
 
     <NetWorthHero @configure="nav.go('settings', 'accounts')" />
+    <MoneyDistribution v-if="session.source !== 'stored'" />
 
     <div v-if="session.source !== 'stored'" class="grid">
       <AccountsTable :rows="rows" :selected="selected?.id ?? null" :can-add="session.source === 'phone'"

@@ -22,10 +22,7 @@ export interface AccountRow {
 
 const LOAN_GROUP = /loan|debt|mortgage/i
 
-/**
- * One list for every account. What a card owes is always shown as debt: the
- * demo data reports it positive while the dashboard counts it against you.
- */
+/** One list for every account, preserving the same signed balances as metadata totals. */
 export function buildAccountRows(assets: AssetGroup[], cards: CardGroup[]): AccountRow[] {
   const cardIds = new Set(cards.flatMap((g) => g.items.map((c) => c.id)))
   const rows: Omit<AccountRow, 'share'>[] = [
@@ -34,7 +31,7 @@ export function buildAccountRows(assets: AssetGroup[], cards: CardGroup[]): Acco
       kind: (a.balance < 0 || LOAN_GROUP.test(g.name) ? 'loan' : 'bank') as AccountKind,
     }))),
     ...cards.flatMap((g) => g.items.map((c) => ({
-      id: c.id, name: c.name, color: c.color, type: 'Credit card', balance: -Math.abs(c.outstanding), kind: 'card' as const,
+      id: c.id, name: c.name, color: c.color, type: 'Credit card', balance: c.outstanding, kind: 'card' as const,
       linkedAssetId: c.linkedAssetId, closingDay: c.closingDay, paymentDay: c.paymentDay,
     }))),
   ]

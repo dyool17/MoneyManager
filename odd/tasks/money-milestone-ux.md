@@ -12,9 +12,9 @@ S6. "y otra de deudas con las cuentas negativas y dinero en el limbo (el que no 
 S7. "como sea, lo hitos no se muestran como timeline 2025 ----> |hito1--->|hito2 (con su fecha inicio)--->2026 y la grafica del dinero total detras." Check: one shared calendar canvas with year progression, dated milestone markers and the historical total curve behind; preserve future savings progress without projected balances.
 
 ## Tasks
-T1 | S1–S7 | delegated parallel writers (timeline/editor: S1,S2,S7; accounts/distribution: S3–S6; disjoint edit surfaces) | done | commit: pending; fixture RangeError/history-free timeline and positive-card sign RED observed; timeline/editor 13 focused GREEN, accounts 17 focused GREEN, integrated writer suite 299 passed/build passed. Parent integration and browser checks belong to T2.
+T1 | S1–S7 | delegated parallel writers (timeline/editor: S1,S2,S7; accounts/distribution: S3–S6; disjoint edit surfaces) | done | timeline/editor commit: cb57d0c; accounts unit commit: pending; fixture RangeError/history-free timeline and positive-card sign RED observed; timeline/editor 13 focused GREEN, accounts 17 focused GREEN, integrated writer suite 299 passed/build passed. Parent integration and browser checks belong to T2.
 T2 | S1–S7 | parent integration + independent verifier (Risk item 4: async trend caching) | done | final seam: 304 tests/60 files, vue-tsc, Vite build and diff-check passed with direct installed binaries (job-14); Chrome requested flows passed; independent23 tests passed with human-accepted provenance caveat. Native committed-unit assessment is tracked in T3.
-T3 | S1–S7 | parent local delivery | in_progress | single-pr selected; commits/native per-unit assessment and offline AppImage build/install/verification pending.
+T3 | S1–S7 | parent local delivery | in_progress | single-pr selected; timeline/editor cb57d0c committed (278 authored lines), its native assessment unavailable because provider still demands a global untracked declaration even for committedOnly. Accounts commit and offline AppImage build/install/verification pending.
 
 ## Log
 L1. User original request (verbatim):

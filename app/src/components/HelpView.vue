@@ -38,9 +38,11 @@ const SPENDING_TOOLS = [
     <header>
       <h1>{{ t('Help') }}</h1>
       <p class="lead">{{ t('Money Manager Desktop shows and analyses the data of the Money Manager phone app on your computer. Everything stays on this computer.') }}</p>
-      <p>{{ t('In Money, select a milestone below the net worth chart to highlight its dates and compare observed monthly balances with estimated spending impact. Use 6M, 12M or All to change the shared timeline.') }}</p>
-      <p>{{ t('In Milestones, enable Savings goal, enter a positive target and currency, and link accounts. Start is the deadline; expense categories are optional. Future goals remain visible with 6M, 12M or All, even without history. Progress needs loaded balances and explicit currency metadata; stored movements alone cannot provide it. Goals stay private and do not change spending baselines.') }}</p>
+      <p>{{ t('In Money, follow the calendar rail and select a dated milestone over the net worth history. Scroll the shared timeline horizontally when needed; milestones remain visible without historical balances. Use 6M, 12M or All for the history range.') }}</p>
+      <p>{{ t('In Milestones, enable Savings goal next to its label, choose Goal deadline, enter a positive target and currency, and link accounts. Spending categories are optional. Future goals remain visible without historical balances. Progress needs loaded balances and explicit currency metadata; goals stay private in assistant context.') }}</p>
       <p>{{ t('Uses current whole account balances, not future balances. Money is not reserved or moved. Shared accounts measure each goal independently; do not add goals as separate funds.') }}</p>
+      <p>{{ t('Money distribution has three non-overlapping groups: included positive balances, included debts, and excluded balances in Limbo. Limbo separates positive and negative contributions and shows their signed net. Unconfigured accounts are listed separately until inclusion and currency settings are resolved.') }}</p>
+      <p>{{ t('The Accounts list scrolls inside its panel. Selecting an account updates its details immediately; the first history request waits for the phone, while revisiting loaded history uses a temporary cache cleared by refresh or a change of phone, source or book.') }}</p>
     </header>
 
     <div class="card steps">
