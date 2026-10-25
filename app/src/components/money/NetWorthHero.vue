@@ -58,7 +58,7 @@ const netShown = useCountUp(computed(() => current.value?.netWorth))
         </div>
       </div>
       <p v-if="session.source === 'phone'" class="muted note">{{ t('Historical figures are PC Manager data and are not recalculated with current account settings.') }}</p>
-      <NetWorthTimeline v-if="history.length || events.state.events.some(e => e.savingsGoal && e.start > todayIso())" :history="history" :events="events.state.events" :movements="session.movements" :today="todayIso()" />
+      <NetWorthTimeline v-if="history.length || events.state.events.length" :history="history" :events="events.state.events" :movements="session.movements" :today="todayIso()" />
       <p v-else class="muted">{{ t('No history yet.') }}</p>
       <p v-if="events.storageError" role="alert">{{ t(events.storageError) }}</p>
     </div>

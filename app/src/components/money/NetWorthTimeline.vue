@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import SavingsGoalProgress from '../milestones/SavingsGoalProgress.vue'
+import { useSavingsGoals } from '../../composables/savingsGoals'
 import { computed, ref } from 'vue'
 import { t } from '../../i18n'
 import { formatDate, formatMoney, monthLabel } from '../../domain/format'
@@ -16,7 +17,20 @@ const selected = computed(() => data.value.events.find(e => e.event.id === selec
 const impact = computed(() => selected.value ? eventImpact({ ...selected.value.event, end: selected.value.end }, props.movements, props.today) : null)
 const hasEstimate = computed(() => impact.value?.categories.some(c => c.baseline !== null))
 const partialEstimate = computed(() => impact.value?.categories.some(c => c.baseline === null))
-const W = 640, LEFT = 72, RIGHT = 16, TOP = 22, BOTTOM = 170
+const W = 800, LEFT = 100, RIGHT = 100, TOP = 22, BOTTOM = 170
+const savings = useSavingsGoals()
+const markers = computed(() => {
+  const laneEnds: number[] = []
+  return data.value.events.map(item => {
+    const px = x(item.startX)
+    let lane = laneEnds.findIndex(end => end + 12 < px - 85)
+    if (lane < 0) lane = laneEnds.length
+    laneEnds[lane] = px + 85
+    const progress = item.event.savingsGoal ? savings.progress(item.event.savingsGoal) : null
+    return { ...item, px, lane, percent: progress ? Math.round(progress.percent) : null }
+  })
+})
+const chartHeight = computed(() => 250 + (Math.max(0, ...markers.value.map(m => m.lane)) + 1) * 72)
 const x = (fraction: number) => LEFT + fraction * (W - LEFT - RIGHT)
 const geometry = computed(() => {
   const values = data.value.points.map(p => p.total)
@@ -38,9 +52,12 @@ const select = (id: string) => { selectedId.value = selectedId.value === id ? nu
   <div class="combined">
     <p class="muted explanation">{{ t('Monthly net worth and milestones share the same dates. Correlation does not prove causation; estimated spending impact is not a balance adjustment.') }}</p>
     <div class="legend"><span class="line-key" />{{ t('Net worth') }} <span class="event-key" />{{ t('Milestones') }}</div>
+    <p v-if="!data.points.length" class="muted">{{ t('Historical balances unavailable. Dated milestones remain visible.') }}</p>
+    <p v-if="data.skipped" class="muted">{{ t('Unsupported history observations skipped: {n}', { n: data.skipped }) }}</p>
     <figure v-if="data.points.length || data.events.length">
-      <svg :viewBox="`0 0 ${W} 205`" role="img" :aria-label="t('Net worth and milestone timeline')">
-        <template v-for="tick in geometry.ticks" :key="tick.value">
+      <div class="calendar-scroll" tabindex="0" :aria-label="t('Net worth and milestone timeline')">
+      <svg :viewBox="`0 0 ${W} ${chartHeight}`" role="group" :aria-label="t('Net worth and milestone timeline')">
+        <template v-for="tick in data.points.length ? geometry.ticks : []" :key="tick.value">
           <line :x1="LEFT" :x2="W - RIGHT" :y1="tick.y" :y2="tick.y" class="grid" />
           <text :x="LEFT - 8" :y="tick.y + 4" text-anchor="end">{{ formatMoney(tick.value) }}</text>
         </template>
@@ -54,16 +71,28 @@ const select = (id: string) => { selectedId.value = selectedId.value === id ? nu
           </circle>
           <text v-if="i === 0 || i === geometry.points.length - 1 || (geometry.points.length > 4 && i === Math.floor(geometry.points.length / 2))" :x="point.px" y="195" text-anchor="middle">{{ point.month }}</text>
         </g>
+        <line :x1="LEFT" :x2="W - RIGHT + 20" y1="215" y2="215" class="calendar-rail" />
+        <path :d="`M${W - RIGHT + 12},210 l8,5 l-8,5`" class="calendar-rail" />
+        <g v-for="year in data.years" :key="year.year">
+          <line :x1="x(year.x)" :x2="x(year.x)" y1="208" y2="222" class="calendar-rail" />
+          <text :x="x(year.x)" y="239" text-anchor="middle">{{ year.year }}</text>
+        </g>
+        <g v-for="item in markers" :key="item.event.id" class="milestone-marker">
+          <line :x1="item.px" :x2="item.px" :y1="TOP" :y2="250 + item.lane * 72" class="marker-guide" />
+          <circle :cx="item.px" cy="215" r="6" class="point" />
+          <foreignObject :x="item.px - 85" :y="250 + item.lane * 72" width="170" height="68">
+            <button type="button" class="milestone-select" :aria-pressed="selectedId === item.event.id" @click="select(item.event.id)">
+              <strong>{{ item.event.label }}</strong>
+              <span>{{ formatDate(item.event.start) }}<template v-if="item.event.start > today"> · {{ t('Planned') }}</template></span>
+              <span v-if="item.event.savingsGoal">{{ t('Savings goal') }} · {{ item.percent === null ? '—' : `${item.percent}%` }}</span>
+            </button>
+          </foreignObject>
+        </g>
       </svg>
+      </div>
       <figcaption>{{ activePoint ? `${monthLabel(activePoint.month)}: ${formatMoney(activePoint.total)}` : t('Net worth by month') }}</figcaption>
     </figure>
-    <div v-if="data.events.length" class="tracks" role="group" :aria-label="t('Select a milestone')">
-      <button v-for="item in data.events" :key="item.event.id" type="button" class="track" :aria-pressed="selectedId === item.event.id" @click="select(item.event.id)">
-        <span class="track-label">{{ item.event.label }} · {{ formatDate(item.event.start) }} <em v-if="item.event.start > today">{{ t('Planned') }}</em></span>
-        <SavingsGoalProgress v-if="item.event.savingsGoal" :goal="item.event.savingsGoal" />
-        <span class="track-axis" aria-hidden="true"><span class="bar" :style="{ left: `${item.startX * 100}%`, width: `${(item.endX - item.startX) * 100}%` }"><span class="marker" /></span></span>
-      </button>
-    </div>
+    <p v-if="data.events.length" class="muted">{{ t('Select a milestone') }}</p>
     <p v-else class="muted">{{ t('No milestones in this history range. Add them in Milestones or choose a wider range.') }}</p>
     <article v-if="selected" class="detail" aria-live="polite">
       <h3>{{ selected.event.label }}</h3>
@@ -85,7 +114,7 @@ const select = (id: string) => { selectedId.value = selectedId.value === id ? nu
 </template>
 
 <style scoped>
-.combined { display: grid; gap: .75rem; }
+.combined { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: .75rem; }
 p, figure, h3 { margin: 0; }
 .explanation, .legend, figcaption, .detail { font-size: .85rem; }
 .legend { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
@@ -99,15 +128,13 @@ text { fill: var(--ink-soft); font-size: 11px; }
 .hit { fill: transparent; }
 .window { fill: var(--accent); opacity: .13; }
 figcaption { min-height: 1.3em; color: var(--ink-soft); }
-.tracks { display: grid; gap: .4rem; max-height: 18rem; overflow-y: auto; }
-.track { display: block; text-align: left; width: 100%; padding: .4rem 0; background: transparent; border: 1px solid transparent; border-radius: 6px; cursor: pointer; }
-.track:hover, .track[aria-pressed='true'] { background: var(--accent-soft); border-color: var(--accent); }
-.track:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.track-label { display: block; padding: 0 .5rem; overflow-wrap: anywhere; font-size: .85rem; }
-.track-axis { display: block; position: relative; height: 20px; margin-left: 11.25%; margin-right: 2.5%; }
-.track-axis::before { content: ''; position: absolute; top: 10px; width: 100%; height: 1px; background: var(--rule); }
-.bar { position: absolute; top: 7px; height: 7px; background: var(--ink-soft); border-radius: 4px; min-width: 2px; }
-.marker { position: absolute; left: -4px; top: -1px; width: 9px; height: 9px; border-radius: 50%; background: var(--ink-soft); }
-.track[aria-pressed='true'] .bar, .track[aria-pressed='true'] .marker { background: var(--accent); }
+.calendar-scroll { min-width: 0; max-width: 100%; overflow: auto; max-height: 32rem; }
+.calendar-scroll svg { min-width: 800px; }
+.calendar-rail { stroke: var(--ink-soft); fill: none; stroke-width: 2; }
+.marker-guide { stroke: var(--ink-soft); stroke-dasharray: 2 4; opacity: .45; }
+.milestone-select { box-sizing: border-box; width: 166px; height: 64px; margin: 2px; padding: 4px 6px; display: flex; flex-direction: column; text-align: left; justify-content: center; background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; cursor: pointer; font-size: 11px; }
+.milestone-select strong { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.milestone-select:hover, .milestone-select[aria-pressed='true'] { background: var(--accent-soft); border-color: var(--accent); }
+.milestone-select:focus-visible { outline: 2px solid var(--accent); }
 .detail { padding: 1rem; border: 1px solid var(--rule); border-radius: 8px; display: grid; gap: .5rem; overflow-wrap: anywhere; }
 </style>

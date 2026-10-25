@@ -9,7 +9,7 @@ import { locale } from '../../i18n'
 
 const history = [1, 2, 3].map(n => ({ month: `2026-0${n}`, total: n * 100, assets: n * 100, debts: 0 }))
 const event = { id: 'e', label: 'Moving <home>', start: '2026-02-10', end: '2026-03-15', kind: 'temporary' as const, categoryIds: ['home'] }
-const render = (events = [event], points = history) => renderToString(createSSRApp(NetWorthTimeline, { history: points, events, movements: [], today: '2026-03-31' }))
+const render = (events = [event], points = history) => renderToString(createSSRApp(NetWorthTimeline, { history: points, events, movements: [], today: '2026-03-31' }).use(createPinia()))
 
 it('renders monthly balances and selectable, escaped milestone tracks on the combined chart', async () => {
   locale.value = 'en'
@@ -20,6 +20,9 @@ it('renders monthly balances and selectable, escaped milestone tracks on the com
   expect(html).toContain('2026-01')
   expect(html).toContain('300.00')
   expect(html).toContain('Correlation does not prove causation')
+  expect(html).toContain('class="calendar-rail"')
+  expect(html).toContain('class="milestone-marker"')
+  expect(html).not.toContain('class="track"')
 })
 
 it('keeps the balance chart with no milestones and excludes milestones outside the range', async () => {
@@ -40,6 +43,15 @@ it('preserves the history empty state only when no monthly balances exist', asyn
   expect(await renderHero()).not.toContain('No history yet.')
   session.dashboard = { ...session.dashboard, history: [] }
   expect(await renderHero()).toContain('No history yet.')
+})
+
+it('keeps dated ordinary events without balances and reports skipped unsupported history', async () => {
+  locale.value = 'en'
+  const html = await render([event], [{ ...history[0]!, month: 'unknown' }])
+  expect(html).toContain('Historical balances unavailable')
+  expect(html).toContain('Unsupported history observations skipped: 1')
+  expect(html).toContain('Moving &lt;home&gt;')
+  expect(html).not.toMatch(/NaN|Infinity/)
 })
 
 it('localizes the combined view in Spanish', async () => {

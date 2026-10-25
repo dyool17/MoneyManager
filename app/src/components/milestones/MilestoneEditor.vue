@@ -55,17 +55,25 @@ function save() {
   <form class="card editor" @submit.prevent="save">
     <h2>{{ event ? t('Edit milestone') : t('Add milestone') }}</h2>
     <label>{{ t('Note') }}<input v-model="form.label" required /></label>
-    <label><input v-model="goalEnabled" type="checkbox" />{{ t('Savings goal') }}</label>
-    <fieldset v-if="goalEnabled"><legend>{{ t('Savings goal') }}</legend>
+    <label class="check-row goal-toggle"><input v-model="goalEnabled" type="checkbox" />{{ t('Savings goal') }}</label>
+    <p class="muted">{{ t('Track ordinary spending changes, a savings target, or both.') }}</p>
+    <label>{{ goalEnabled ? t('Goal deadline') : t('Start') }}<input v-model="form.start" type="date" required /></label>
+    <fieldset v-if="goalEnabled" class="goal-fields"><legend>{{ t('Savings goal') }}</legend>
+      <div class="goal-amounts">
       <label>{{ t('Target amount') }}<input v-model="goal.target" type="number" min="0.01" step="any" required /></label>
       <label>{{ t('Goal currency (ISO code)') }}<input v-model="goal.currency" pattern="[A-Za-z]{3}" required maxlength="3" /></label>
+      </div>
       <p>{{ t('Use an account currency or the configured base currency. Missing conversion makes progress unavailable.') }}</p>
-      <p>{{ t('Start is the goal deadline. Expense categories are optional for goals.') }}</p>
-      <label v-for="account in accountChoices" :key="account.id"><input v-model="goal.accountIds" type="checkbox" :value="account.id" />{{ account.name }}</label>
+      <fieldset class="linked-accounts"><legend>{{ t('Linked accounts') }}</legend>
+      <p v-if="!accountChoices.length">{{ t('Load accounts to link balances to this goal.') }}</p>
+      <label v-for="account in accountChoices" :key="account.id" class="check-row"><input v-model="goal.accountIds" type="checkbox" :value="account.id" />{{ account.name }}</label>
+      </fieldset>
     </fieldset>
+    <section class="spending-fields">
+    <h3>{{ goalEnabled ? t('Optional spending changes') : t('Spending changes') }}</h3>
+    <p v-if="goalEnabled">{{ t('Expense categories are optional for goals. The deadline also dates any linked spending changes.') }}</p>
     <label>{{ t('Kind') }}<select v-model="form.kind"><option value="one-off">{{ t('One-off spike') }}</option><option value="new-normal">{{ t('New normal') }}</option><option value="temporary">{{ t('Temporary') }}</option></select></label>
     <p>{{ form.kind === 'one-off' ? t('One-off: a single spike, excluded from the projection baseline.') : form.kind === 'new-normal' ? t('New normal: the category baseline restarts at this date.') : t('Temporary: spending changes while this event lasts.') }}</p>
-    <label>{{ t('Start') }}<input v-model="form.start" type="date" required /></label>
     <label>{{ t('End (blank = still open)') }}<input v-model="form.end" type="date" :min="form.start" /></label>
     <label>{{ t('Search categories') }}<input v-model="search" type="search" /></label>
     <p>{{ t('Expected amounts are optional positive monthly changes, not measured impact.') }}</p>
@@ -77,6 +85,7 @@ function save() {
         </template>
       </div>
     </fieldset>
+    </section>
     <p v-if="error" role="alert">{{ t('Could not save locally: {error}', { error: t(error) }) }}</p>
     <div><button type="submit">{{ t('Save event') }}</button><button type="button" @click="emit('close')">{{ t('Cancel') }}</button></div>
   </form>
@@ -85,10 +94,19 @@ function save() {
 <style scoped>
 .editor { display: grid; gap: .7rem; padding: 1rem; border: 1px solid var(--rule); border-radius: 12px; }
 label { display: grid; gap: .25rem; }
-fieldset { max-height: 24rem; overflow: auto; border: 1px solid var(--rule); }
+fieldset { min-width: 0; margin: 0; padding: .8rem; border: 1px solid var(--rule); border-radius: 8px; display: grid; gap: .65rem; }
+legend, h3 { font-weight: 600; }
+h3, p { margin: 0; }
+.spending-fields { display: grid; gap: .7rem; padding-top: .7rem; border-top: 1px solid var(--rule); }
+.goal-amounts { display: grid; grid-template-columns: 2fr 1fr; gap: .8rem; }
+.linked-accounts { max-height: 12rem; overflow: auto; }
+.check-row { display: flex; align-items: center; gap: .55rem; overflow-wrap: anywhere; }
+.check-row input[type='checkbox'] { width: auto; flex: 0 0 auto; margin: 0; }
+.goal-toggle { justify-self: start; font-weight: 600; padding: .5rem 0; }
+.editor input, .editor select { box-sizing: border-box; min-width: 0; }
 .category { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; padding: .5rem; }
 input, select { width: 100%; }
 button { margin-right: .5rem; }
 [role='alert'] { color: var(--expense); }
-@media (max-width: 600px) { .category { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .category, .goal-amounts { grid-template-columns: 1fr; } }
 </style>

@@ -47,7 +47,7 @@ function remove() {
 
     <p v-if="session.source === 'stored'" role="status" class="muted">{{ t('Balances, net worth, accounts and cards need the phone. Stored movements remain available in reports.') }}</p>
 
-    <NetWorthHero v-else @configure="nav.go('settings', 'accounts')" />
+    <NetWorthHero @configure="nav.go('settings', 'accounts')" />
 
     <div v-if="session.source !== 'stored'" class="grid">
       <AccountsTable :rows="rows" :selected="selected?.id ?? null" :can-add="session.source === 'phone'"

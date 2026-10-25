@@ -1,6 +1,8 @@
 import { expect, it } from 'vitest'
 import { netWorthTimeline } from './net-worth-timeline'
 import type { LifeEvent } from './life-events'
+import { parseDashboard } from '../infrastructure/parse'
+import dashboardText from '../../../fixtures/moneymanager/dashboard.json5?raw'
 const event: LifeEvent = { id: 'move', label: 'Move', start: '2026-02-10', end: '2026-03-20', kind: 'temporary', categoryIds: ['home'] }
 const history = ['01', '02', '03', '05'].map((month, i) => ({ month: `2026-${month}`, total: [100, 80, 120, 150][i]! }))
 
@@ -41,8 +43,25 @@ it('extends the calendar to future goals without inventing observations, even wi
   expect(Number.isFinite(empty.events[0]!.startX)).toBe(true)
 })
 
+it('normalizes shipped dashboard months locally and skips unsupported observations', () => {
+  const dashboard = parseDashboard(dashboardText)
+  const original = JSON.stringify(dashboard.history)
+  expect(dashboard.history.some(p => p.month === 'Jun 2026')).toBe(true)
+  const result = netWorthTimeline(dashboard.history, [], '2026-06-30')
+  expect(JSON.stringify(dashboard.history)).toBe(original)
+  expect(result.points.length).toBe(dashboard.history.length)
+  expect(result.points.every(p => /^\d{4}-\d{2}$/.test(p.month) && Number.isFinite(p.x))).toBe(true)
+  expect(result.points.map(p => p.total).sort((a, b) => a - b)).toEqual(dashboard.history.map(p => p.total).sort((a, b) => a - b))
+  const skipped = netWorthTimeline([{ month: 'unknown', total: 12 }, { month: '2026-13', total: 10 }], [event], '2026-05-31')
+  expect(skipped.points).toEqual([])
+  expect(skipped.skipped).toBe(2)
+  expect(skipped.events[0]!.event.id).toBe(event.id)
+  expect(skipped.events.every(e => Number.isFinite(e.startX) && Number.isFinite(e.endX))).toBe(true)
+  expect(netWorthTimeline([{ month: 'Jan 2026', total: -123.45 }], [], '2026-05-31').points[0]!.total).toBe(-123.45)
+})
+
 it('handles no history, one month, and no milestones without non-finite geometry', () => {
-  expect(netWorthTimeline([], [event], '2026-05-31')).toEqual({ points: [], events: [] })
+  expect(netWorthTimeline([], [event], '2026-05-31').events[0]!.event.id).toBe(event.id)
   const single = netWorthTimeline(history.slice(1, 2), [event], '2026-05-31')
   expect(single.points[0]!.x).toBeGreaterThan(0)
   expect(single.points[0]!.x).toBeLessThan(1)
